@@ -82,6 +82,8 @@ void Menu::selectAttackType(){
             case 2:
                 break;
             case 3:
+                break;
+            case 4:
                 // Goes back to menu
                 flag = false;
                 break;
