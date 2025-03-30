@@ -5,6 +5,7 @@
 #include <ctime>
 #include <unistd.h>
 #include "helperfuncs.h"
+#include "protocols/syn.h"
 
 class Menu {
 public:
@@ -15,11 +16,9 @@ public:
     ~Menu();
 
     void printLogo();
-    
     void printMenu();
 
     void selectAttackType();
-
     void funnyCatPicture();
     
 private:

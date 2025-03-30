@@ -65,7 +65,7 @@ void Menu::selectAttackType(){
     while(flag){
         // Attack types
         std::cout << "\nSelect an attack type:" << std::endl;
-        std::cout << "1. SYN Flood" << std::endl;
+        std::cout << "1. SYN Flood (different source ip's each packet)" << std::endl;
         std::cout << "2. ICMP Ping Flood" << std::endl;
         std::cout << "3. ARP Spoofing" << std::endl;
         std::cout << "4. Back to menu\n" << std::endl;
@@ -77,19 +77,41 @@ void Menu::selectAttackType(){
 
         // Handle choice
         switch(choice){
-            case 1:
+            case 1: {
+                std::cout << "Input the target IP: ";
+                std::string target_ip_str;
+                std::cin >> target_ip_str;
+                const char* target_ip = target_ip_str.c_str(); // Convert to const char*
+
+                std::cout << "Input the target port: ";
+                int target_port;
+                std::cin >> target_port;
+
+                std::cout << "Input the number of packets: ";
+                int packet_count;
+                std::cin >> packet_count;
+
+                // SYN flood
+                SYN syn_instance;
+                syn_instance.syn_flood(target_ip, target_port, packet_count);
+
                 break;
-            case 2:
+            }
+            case 2: {
                 break;
-            case 3:
+            }
+            case 3: {
                 break;
-            case 4:
+            }
+            case 4: {
                 // Goes back to menu
                 flag = false;
                 break;
-            default:
+            }
+            default: {
                 std::cout << "Invalid choice. Please try again." << std::endl;
                 break;
+            }
         }
     }
 }
