@@ -1,24 +1,7 @@
 #include "syn.h"
 
-// Pseudo-header structure for TCP checksum calculation
-struct PseudoHeader {
-    uint32_t source_ip;
-    uint32_t dest_ip;
-    uint8_t reserved;
-    uint8_t protocol;
-    uint16_t tcp_length;
-};
-
-// Compute checksum
-/**
- * @brief Compute the checksum of a block of data.
- *
- * @param data A pointer to the data to be checksummed.
- * @param len The length of the data in bytes.
- *
- * @return The checksum of the data.
- */
-unsigned short checksum(void* data, int len) {
+// Function to calculate the checksum of a packet
+unsigned short SYN::checksum(void* data, int len) {
     unsigned short* ptr = (unsigned short*)data;
     unsigned long sum = 0;
     

