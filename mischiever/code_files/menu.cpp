@@ -2,6 +2,7 @@
 
 // Constructor
 Menu::Menu(){
+    // Print logo and menu when menu is created
     printLogo();
     printMenu();
 }
@@ -22,8 +23,8 @@ void Menu::printLogo(){
     sleep(WAITING_TIME);
     this->helper.clearScreen();
     std::cout << this->logo4 << std::endl;
-    std::cout << this->line << std::endl;
     sleep(WAITING_TIME);
+    std::cout << this->line << std::endl;
 }
 
 void Menu::printMenu(){
@@ -32,8 +33,9 @@ void Menu::printMenu(){
     while(true){
         std::cout << "Please select an option:" << std::endl;
         std::cout << "1. Select attack type" << std::endl;
-        std::cout << "2. Funny cat picture" << std::endl;
-        std::cout << "3. Exit\n" << std::endl;
+        std::cout << "2. Manage active attacks" << std::endl;
+        std::cout << "3. Funny cat picture" << std::endl;
+        std::cout << "4. Exit\n" << std::endl;
         std::cout << "Your choice: ";
 
         // Get input
@@ -46,9 +48,13 @@ void Menu::printMenu(){
                 selectAttackType();
                 break;
             case 2:
-                funnyCatPicture();
+                // Manage active attacks
+                std::cout << "This feature is not implemented yet." << std::endl;
                 break;
             case 3:
+                funnyCatPicture();
+                break;
+            case 4:
                 exit(0);
                 break;
             default:
@@ -91,10 +97,12 @@ void Menu::selectAttackType(){
                 int packet_count;
                 std::cin >> packet_count;
 
-                // SYN flood
+                // SYN flood as thread
                 SYN syn_instance;
-                syn_instance.syn_flood(target_ip, target_port, packet_count);
+                std::thread syn_thread(&SYN::syn_flood, &syn_instance, target_ip, target_port, packet_count);
 
+
+                
                 break;
             }
             case 2: {
