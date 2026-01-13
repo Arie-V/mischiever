@@ -20,10 +20,6 @@ void Menu::printLogo(){
     sleep(WAITING_TIME);
     this->helper.clearScreen();
     std::cout << this->logo3 << std::endl;
-    sleep(WAITING_TIME);
-    this->helper.clearScreen();
-    std::cout << this->logo4 << std::endl;
-    sleep(WAITING_TIME);
     std::cout << this->line << std::endl;
 }
 
@@ -71,7 +67,7 @@ void Menu::selectAttackType(){
     while(flag){
         // Attack types
         std::cout << "\nSelect an attack type:" << std::endl;
-        std::cout << "1. SYN Flood (different source ip's each packet)" << std::endl;
+        std::cout << "1. SYN Flood" << std::endl;
         std::cout << "2. ARP Spoofing" << std::endl;
         std::cout << "3. ICMP Ping Flood" << std::endl;
         std::cout << "4. Back to menu\n" << std::endl;
@@ -97,13 +93,26 @@ void Menu::selectAttackType(){
                 int packet_count;
                 std::cin >> packet_count;
 
-                // SYN flood as thread
-                SYN syn_instance;
-                std::thread syn_thread(&SYN::syn_flood, &syn_instance, target_ip, target_port, packet_count);
-
-
+                // Create strings on Heap or pass by value to thread to ensure they survive
+                std::string* safe_ip = new std::string(target_ip_str);
                 
+                // Create the object on the Heap so it survives the scope
+                SYN* syn_attack = new SYN(); 
+
+                // Launch thread and Detach
+                std::thread t([syn_attack, safe_ip, target_port, packet_count]() {
+                    // Run the flood
+                    syn_attack->syn_flood(safe_ip->c_str(), target_port, packet_count);
+                    
+                    // Cleanup memory when done (Self-destruct)
+                    delete safe_ip;
+                    delete syn_attack;
+                });
+                
+                t.detach(); // Allows the menu to keep running while attack happens
+                std::cout << "[+] Attack launched in background!" << std::endl;
                 break;
+                
             }
             case 2: {
                 const char* iface;

@@ -12,6 +12,7 @@ g++ -c code_files/processes.cpp
 g++ -c code_files/protocols/syn.cpp
 g++ -c code_files/protocols/arp.cpp
 g++ -o mischiever main.o helperfuncs.o menu.o syn.o arp.o processes.o
+rm *.o
 */
 
 int main() {

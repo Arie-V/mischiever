@@ -87,5 +87,4 @@ void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
     }
 
     close(sock);  // Close the socket after sending packets
-    std::cout << "SYN flood attack finished.\n";
 }
