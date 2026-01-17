@@ -7,14 +7,15 @@
 #include <unistd.h>
 #include <thread>
 #include "helperfuncs.h"
-#include "protocols/syn.h"
-#include "protocols/arp.h"
+#include "syn.h"
+#include "arp.h"
 #include "processes.h"
+#include "database.h"
 
 class Menu {
 public:
     // Constructor
-    Menu();
+    Menu(Database* database);
 
     // Destructor
     ~Menu();
@@ -28,6 +29,9 @@ public:
 private:
     // Helperfunctions instance for misc functions    
     HelperFunctions helper;
+
+    // Database instance
+    Database* db;
 
     // Procceses instance for managing threads
     Processes processes;

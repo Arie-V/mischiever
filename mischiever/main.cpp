@@ -1,7 +1,8 @@
 #include <iostream>
 #include <string>
-#include "code_files/menu.h"
-    
+#include "code_files/headers/menu.h"
+#include "code_files/headers/database.h"
+
 /*
 Compilation command:
 
@@ -16,9 +17,11 @@ rm *.o
 */
 
 int main() {
-    // Create menu object
-    Menu menu;
+    // 1. Initialize Database
+    Database db;
 
+    // 2. Pass DB to Menu and initialize it
+    Menu menu(&db); 
 
     return 0;
 }

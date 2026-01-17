@@ -1,7 +1,9 @@
-#include "menu.h"
+#include "headers/menu.h"
 
 // Constructor
-Menu::Menu(){
+Menu::Menu(Database* database){
+    // Initialize database
+    this->db = database;
     // Print logo and menu when menu is created
     printLogo();
     printMenu();
@@ -29,7 +31,7 @@ void Menu::printMenu(){
     while(true){
         std::cout << "Please select an option:" << std::endl;
         std::cout << "1. Select attack type" << std::endl;
-        std::cout << "2. Manage active attacks" << std::endl;
+        std::cout << "2. Attack History" << std::endl;
         std::cout << "3. Funny cat picture" << std::endl;
         std::cout << "4. Exit\n" << std::endl;
         std::cout << "Your choice: ";
@@ -45,7 +47,7 @@ void Menu::printMenu(){
                 break;
             case 2:
                 // Manage active attacks
-                std::cout << "This feature is not implemented yet." << std::endl;
+                this->db->print_history();
                 break;
             case 3:
                 funnyCatPicture();
@@ -109,8 +111,11 @@ void Menu::selectAttackType(){
                     delete syn_attack;
                 });
                 
+                // Log the attack
+                this->db->log_attack("SYN Flood", "192.168.x.x (You)", target_ip_str);
+
                 t.detach(); // Allows the menu to keep running while attack happens
-                std::cout << "[+] Attack launched in background!" << std::endl;
+                std::cout << "[+] Attack launched!" << std::endl;
                 break;
                 
             }

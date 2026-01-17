@@ -1,4 +1,4 @@
-#include "helperfuncs.h"
+#include "headers/helperfuncs.h"
 
 void HelperFunctions::clearScreen(){
     #ifdef _WIN32

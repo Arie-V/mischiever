@@ -1,6 +1,6 @@
 # Compiler and Flags
 CXX = g++
-CXXFLAGS = -Wall -std=c++11 -pthread -lpcap
+CXXFLAGS = -Wall -std=c++11 -pthread -lpcap -lsqlite3
 
 # Target Executable
 TARGET = mischiever
@@ -10,6 +10,7 @@ SRCS = main.cpp \
        code_files/helperfuncs.cpp \
        code_files/menu.cpp \
        code_files/processes.cpp \
+       code_files/database.cpp \
        code_files/protocols/syn.cpp \
        code_files/protocols/arp.cpp
 
