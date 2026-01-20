@@ -13,6 +13,10 @@
 #include <net/if.h>
 #include <linux/if_packet.h>
 #include <thread>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <chrono>   
 #include <mutex>
 #include <atomic> // Need this for the stop flag
@@ -25,23 +29,29 @@ class ARP {
 
         // Constructor to initialize flag
         ARP() { attacking = false; }
-    
+
+        // Function to get the Gateway IP automatically
+        std::string get_default_gateway(const char* iface);
+
         // Function to send an ARP spoofing packet
-        void send_arp_spoof(const char* iface, const char* target_ip, const char* spoof_ip);
+        void send_arp_spoof(const char* iface, const char* target_ip, const char* spoof_ip, const char* target_mac_str);
     private:
 
     // Structure for ARP header
-        struct __attribute__((packed)) arp_header {
-            uint16_t htype;
-            uint16_t ptype;
-            uint8_t hlen;
-            uint8_t plen;
-            uint16_t oper;
-            uint8_t sha[6];
-            uint8_t spa[4];
-            uint8_t tha[6];
-            uint8_t tpa[4];
-        };
+    struct __attribute__((packed)) arp_header { 
+        uint16_t htype;
+        uint16_t ptype;
+        uint8_t hlen;
+        uint8_t plen;
+        uint16_t oper;
+        uint8_t sha[6];
+        uint8_t spa[4];
+        uint8_t tha[6];
+        uint8_t tpa[4];
+    };
+
+    // Helper to convert "00:11:22..." string to bytes
+    void parse_mac(const char* mac_str, uint8_t* mac_out);
 
     // Function to get the MAC address of the attacker's network interface
     void get_mac_address(const char* iface, uint8_t* mac);

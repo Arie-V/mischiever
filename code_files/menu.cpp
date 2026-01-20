@@ -120,42 +120,59 @@ void Menu::selectAttackType(){
                 
             }
             case 2: {
-                // 1. CHECK: Is it already running?
                 if (this->arp_tool.attacking) {
-                    std::cout << "\n[!] Stopping ARP Spoofing..." << std::endl;
                     this->arp_tool.attacking = false;
-                    
-                    // Give the thread a moment to finish its last loop
-                    std::this_thread::sleep_for(std::chrono::seconds(2)); 
-                    std::cout << "[+] Attack Stopped Successfully." << std::endl;
+                    std::cout << "\n[!] Stopping Attack..." << std::endl;
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
                 } 
-                // 2. START: It's not running, so let's configure and start it.
                 else {
-                    const char* iface;
-                    std::cout << "Getting current device's interface..." << std::endl;
-                    sleep(WAITING_TIME);
-                    iface = helper.get_iface();
-                    std::cout << "Your current interface is: " << iface << std::endl;
+                    // 1. Get Interface
+                    const char* iface = helper.get_iface();
+                    std::string iface_str = std::string(iface);
+                    std::cout << "Interface: " << iface_str << std::endl;
 
+                    // 2. Get Target IP (The ONLY manual input)
                     std::string target_ip_str;
-                    std::cout << "Input the target IP (Victim's IP): ";
+                    std::cout << "Target IP: ";
                     std::cin >> target_ip_str;
 
-                    std::string spoof_ip_str;
-                    std::cout << "Input the spoofed IP (Gateway/Router IP): ";
-                    std::cin >> spoof_ip_str;
+                    // 3. Auto-Detect Gateway IP
+                    std::cout << "[*] Detecting Gateway IP... ";
+                    std::string spoof_ip_str = this->arp_tool.get_default_gateway(iface);
+                    if (spoof_ip_str.empty()) {
+                        std::cout << "Failed! Enter manually: ";
+                        std::cin >> spoof_ip_str;
+                    } else {
+                        std::cout << spoof_ip_str << " (Found)" << std::endl;
+                    }
 
-                    std::cout << "\n[+] Launching ARP Spoof in background..." << std::endl;
-
-                    // THREAD SAFETY CRITICAL:
-                    // We capture 'this' to access arp_tool.
-                    // We capture 'target_ip_str' and 'spoof_ip_str' by VALUE (copy) 
-                    // so the thread has its own copy of the strings even after this function ends.
-                    std::thread attack_thread([this, iface, target_ip_str, spoof_ip_str]() {
-                        this->arp_tool.send_arp_spoof(iface, target_ip_str.c_str(), spoof_ip_str.c_str());
-                    });
+                    // 4. Auto-Detect Target MAC
+                    std::cout << "[*] Resolving Target MAC... ";
+                    std::string target_mac_str = helper.get_mac_from_ip(target_ip_str);
                     
-                    attack_thread.detach(); // Detach allows it to run while we go back to menu
+                    if (target_mac_str.empty()) {
+                        std::cout << "Failed to resolve MAC! Is host alive?\n";
+                        std::cout << "Enter MAC manually (e.g. 00:11:22:33:44:55): ";
+                        std::cin >> target_mac_str;
+                    } else {
+                        std::cout << target_mac_str << " (Found)" << std::endl;
+                    }
+
+                    std::cout << "\n[+] Launching Stealth Unicast Attack..." << std::endl;
+
+                    // Launch Thread
+                    std::thread attack_thread([this, iface_str, target_ip_str, spoof_ip_str, target_mac_str]() {
+                        this->arp_tool.send_arp_spoof(iface_str.c_str(), 
+                                                    target_ip_str.c_str(), 
+                                                    spoof_ip_str.c_str(), 
+                                                    target_mac_str.c_str());
+                    });
+
+                    // Log the attack to Database (NEW LINE)
+                    // Using "ARP Spoofing" as the type, and passing the target IP.
+                    this->db->log_attack("ARP Spoofing", "192.168.x.x (You)", target_ip_str);
+
+                    attack_thread.detach();
                 }
                 break;
             }

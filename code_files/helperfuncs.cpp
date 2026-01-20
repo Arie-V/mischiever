@@ -34,3 +34,32 @@ const char* HelperFunctions::get_iface() {
     freeifaddrs(ifaddr); // Free memory
     return iface_name;
 }
+
+std::string HelperFunctions::get_mac_from_ip(std::string ip_addr) {
+    // 1. Send a single silent ping to force the OS to resolve the MAC
+    std::string cmd = "ping -c 1 -W 1 " + ip_addr + " > /dev/null 2>&1";
+    system(cmd.c_str());
+
+    // 2. Read the system ARP cache
+    std::ifstream arp_file("/proc/net/arp");
+    if (!arp_file.is_open()) return "";
+
+    std::string line;
+    // Skip header line
+    std::getline(arp_file, line); 
+
+    while (std::getline(arp_file, line)) {
+        std::stringstream ss(line);
+        std::string ip, hw_type, flags, mac, mask, dev;
+        
+        // Columns: IP | HW_Type | Flags | MAC | Mask | Device
+        ss >> ip >> hw_type >> flags >> mac >> mask >> dev;
+
+        if (ip == ip_addr) {
+            // Found it!
+            if (mac == "00:00:00:00:00:00") return ""; // Failed resolve
+            return mac;
+        }
+    }
+    return ""; // Not found
+}
