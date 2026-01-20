@@ -120,26 +120,43 @@ void Menu::selectAttackType(){
                 
             }
             case 2: {
-                const char* iface;
-                std::cout << "Getting current device's interface..." << std::endl;
-                sleep(WAITING_TIME);
-                iface = helper.get_iface();
-                std::cout << "Your current interface is: " << iface << std::endl;
+                // 1. CHECK: Is it already running?
+                if (this->arp_tool.attacking) {
+                    std::cout << "\n[!] Stopping ARP Spoofing..." << std::endl;
+                    this->arp_tool.attacking = false;
+                    
+                    // Give the thread a moment to finish its last loop
+                    std::this_thread::sleep_for(std::chrono::seconds(2)); 
+                    std::cout << "[+] Attack Stopped Successfully." << std::endl;
+                } 
+                // 2. START: It's not running, so let's configure and start it.
+                else {
+                    const char* iface;
+                    std::cout << "Getting current device's interface..." << std::endl;
+                    sleep(WAITING_TIME);
+                    iface = helper.get_iface();
+                    std::cout << "Your current interface is: " << iface << std::endl;
 
-                std::cout << "Input the target IP (Victim's IP): ";
-                std::string target_ip_str;
-                std::cin >> target_ip_str;
-                const char* target_ip = target_ip_str.c_str(); // Convert to const char*
+                    std::string target_ip_str;
+                    std::cout << "Input the target IP (Victim's IP): ";
+                    std::cin >> target_ip_str;
 
-                std::cout << "Input the spoofed IP (Victim will think this is your IP): ";
-                std::string spoof_ip_str;
-                std::cin >> spoof_ip_str;
-                const char* spoof_ip = spoof_ip_str.c_str(); // Convert to const char*
+                    std::string spoof_ip_str;
+                    std::cout << "Input the spoofed IP (Gateway/Router IP): ";
+                    std::cin >> spoof_ip_str;
 
-                // ARP spoofing
-                ARP arp_instance;
-                arp_instance.send_arp_spoof(iface, target_ip, spoof_ip);
+                    std::cout << "\n[+] Launching ARP Spoof in background..." << std::endl;
 
+                    // THREAD SAFETY CRITICAL:
+                    // We capture 'this' to access arp_tool.
+                    // We capture 'target_ip_str' and 'spoof_ip_str' by VALUE (copy) 
+                    // so the thread has its own copy of the strings even after this function ends.
+                    std::thread attack_thread([this, iface, target_ip_str, spoof_ip_str]() {
+                        this->arp_tool.send_arp_spoof(iface, target_ip_str.c_str(), spoof_ip_str.c_str());
+                    });
+                    
+                    attack_thread.detach(); // Detach allows it to run while we go back to menu
+                }
                 break;
             }
             case 3: {

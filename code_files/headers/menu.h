@@ -30,6 +30,9 @@ private:
     // Helperfunctions instance for misc functions    
     HelperFunctions helper;
 
+    // Made for ARP management (on/off)
+    ARP arp_tool;
+
     // Database instance
     Database* db;
 

