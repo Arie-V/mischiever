@@ -91,12 +91,9 @@ void Menu::selectAttackType(){
         std::cout << C_BOLD << "           ATTACK MODULES               " << C_RESET << std::endl;
         std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
 
-        std::string arp_status = this->arp_tool.attacking ? (std::string(C_GREEN) + "RUNNING" + C_RESET) : (std::string(C_RED) + "STOPPED" + C_RESET);
-
-        std::cout << C_GREEN << "[1]" << C_RESET << " SYN Flood" << std::endl;
-        std::cout << C_GREEN << "[2]" << C_RESET << " ARP Spoofing [" << arp_status << "]" << std::endl;
-        std::cout << C_GREEN << "[3]" << C_RESET << " ICMP Ping Flood" << std::endl;
-        std::cout << C_GREEN << "[4]" << C_RESET << " Back" << std::endl;
+        std::cout << C_GREEN << "[1]" << C_RESET << " Floods" << std::endl;
+        std::cout << C_GREEN << "[2]" << C_RESET << " Spoofings" << std::endl;
+        std::cout << C_GREEN << "[3]" << C_RESET << " Back" << std::endl;
         std::cout << std::endl << C_BOLD << "mischiever/modules > " << C_RESET;
 
         // Get input
@@ -109,19 +106,48 @@ void Menu::selectAttackType(){
 
         // Handle choice
         switch(choice){
+            case 1: showFloodsMenu(); break;
+            case 2: showSpoofingsMenu(); break;
+            case 3: flag = false; break;
+            default:
+                std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
+                sleep(1);
+                break;
+        }
+    }
+}
+
+void Menu::showFloodsMenu() {
+    bool flag = true;
+    while(flag){
+        this->helper.clearScreen();
+        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+        std::cout << C_BOLD << "           FLOOD ATTACKS                " << C_RESET << std::endl;
+        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+
+        std::cout << C_GREEN << "[1]" << C_RESET << " SYN Flood" << std::endl;
+        std::cout << C_GREEN << "[2]" << C_RESET << " ICMP Ping Flood" << std::endl;
+        std::cout << C_GREEN << "[3]" << C_RESET << " Back" << std::endl;
+        std::cout << std::endl << C_BOLD << "mischiever/modules/floods > " << C_RESET;
+
+        int choice;
+        if (!(std::cin >> choice)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            continue;
+        }
+
+        switch(choice){
             case 1: {
-                std::cout << C_CYAN << "Target IP: " << C_RESET;
                 std::string target_ip_str;
-                std::cin >> target_ip_str;
+                if (!get_input("Target IP: ", target_ip_str)) break;
                 const char* target_ip = target_ip_str.c_str(); // Convert to const char*
 
-                std::cout << C_CYAN << "Target Port: " << C_RESET;
                 int target_port;
-                std::cin >> target_port;
+                if (!get_input("Target Port: ", target_port)) break;
 
-                std::cout << C_CYAN << "Packet Count: " << C_RESET;
                 int packet_count;
-                std::cin >> packet_count;
+                if (!get_input("Packet Count: ", packet_count)) break;
 
                 // Create strings on Heap or pass by value to thread to ensure they survive
                 std::string* safe_ip = new std::string(target_ip_str);
@@ -154,6 +180,42 @@ void Menu::selectAttackType(){
                 
             }
             case 2: {
+                std::cout << C_YELLOW << "Not implemented yet." << C_RESET << std::endl;
+                sleep(1);
+                break;
+            }
+            case 3: flag = false; break;
+            default:
+                std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
+                sleep(1);
+                break;
+        }
+    }
+}
+
+void Menu::showSpoofingsMenu() {
+    bool flag = true;
+    while(flag){
+        this->helper.clearScreen();
+        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+        std::cout << C_BOLD << "           SPOOFING ATTACKS             " << C_RESET << std::endl;
+        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+
+        std::string arp_status = this->arp_tool.attacking ? (std::string(C_GREEN) + "RUNNING" + C_RESET) : (std::string(C_RED) + "STOPPED" + C_RESET);
+
+        std::cout << C_GREEN << "[1]" << C_RESET << " ARP Spoofing [" << arp_status << "]" << std::endl;
+        std::cout << C_GREEN << "[2]" << C_RESET << " Back" << std::endl;
+        std::cout << std::endl << C_BOLD << "mischiever/modules/spoofings > " << C_RESET;
+
+        int choice;
+        if (!(std::cin >> choice)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            continue;
+        }
+
+        switch(choice){
+            case 1: {
                 if (this->arp_tool.attacking) {
                     this->arp_tool.attacking = false;
                     std::cout << C_YELLOW << "\n[!] Stopping Attack..." << C_RESET << std::endl;
@@ -167,15 +229,14 @@ void Menu::selectAttackType(){
 
                     // 2. Get Target IP (The ONLY manual input)
                     std::string target_ip_str;
-                    std::cout << C_CYAN << "Target IP: " << C_RESET;
-                    std::cin >> target_ip_str;
+                    if (!get_input("Target IP: ", target_ip_str)) break;
 
                     // 3. Auto-Detect Gateway IP
                     std::cout << C_YELLOW << "[*] Detecting Gateway IP... " << C_RESET;
                     std::string spoof_ip_str = this->arp_tool.get_default_gateway(iface);
                     if (spoof_ip_str.empty()) {
-                        std::cout << C_RED << "Failed! " << C_RESET << "Enter manually: ";
-                        std::cin >> spoof_ip_str;
+                        std::cout << C_RED << "Failed! " << C_RESET;
+                        if (!get_input("Enter manually: ", spoof_ip_str)) break;
                     } else {
                         std::cout << C_GREEN << spoof_ip_str << " (Found)" << C_RESET << std::endl;
                     }
@@ -185,8 +246,8 @@ void Menu::selectAttackType(){
                     std::string target_mac_str = helper.get_mac_from_ip(target_ip_str);
                     
                     if (target_mac_str.empty()) {
-                        std::cout << C_RED << "Failed! " << C_RESET << "Enter MAC manually: ";
-                        std::cin >> target_mac_str;
+                        std::cout << C_RED << "Failed! " << C_RESET;
+                        if (!get_input("Enter MAC manually: ", target_mac_str)) break;
                     } else {
                         std::cout << C_GREEN << target_mac_str << " (Found)" << C_RESET << std::endl;
                     }
@@ -213,14 +274,7 @@ void Menu::selectAttackType(){
                 }
                 break;
             }
-            case 3: {
-                break;
-            }
-            case 4: {
-                // Goes back to menu
-                flag = false;
-                break;
-            }
+            case 2: flag = false; break;
             default: {
                 std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
                 sleep(1);
@@ -233,4 +287,28 @@ void Menu::selectAttackType(){
 void Menu::funnyCatPicture(){
     // Display funny cat picture
     this->helper.displayImage("misc/cat.jpg");
+}
+
+bool Menu::get_input(const std::string& prompt, std::string& output) {
+    std::cout << C_CYAN << prompt << C_RESET;
+    std::cin >> output;
+    if (output == "q" || output == "cancel" || output == "back") {
+        std::cout << C_RED << "- Cancelled" << C_RESET << std::endl;
+        sleep(1);
+        return false;
+    }
+    return true;
+}
+
+bool Menu::get_input(const std::string& prompt, int& output) {
+    std::string str_val;
+    if (!get_input(prompt, str_val)) return false;
+    try {
+        output = std::stoi(str_val);
+    } catch (...) {
+        std::cout << C_RED << "Invalid input." << C_RESET << std::endl;
+        sleep(1);
+        return false;
+    }
+    return true;
 }

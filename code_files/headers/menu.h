@@ -1,6 +1,5 @@
 #ifndef MENU_H
 #define MENU_H
-#define WAITING_TIME 1
 #include <string>
 #include <iostream>
 #include <ctime>
@@ -9,7 +8,6 @@
 #include "helperfuncs.h"
 #include "syn.h"
 #include "arp.h"
-#include "processes.h"
 #include "database.h"
 
 class Menu {
@@ -27,6 +25,12 @@ public:
     void funnyCatPicture();
     
 private:
+    void showFloodsMenu();
+    void showSpoofingsMenu();
+    bool get_input(const std::string& prompt, std::string& output);
+    bool get_input(const std::string& prompt, int& output);
+
+private:
     // Helperfunctions instance for misc functions    
     HelperFunctions helper;
 
@@ -35,15 +39,6 @@ private:
 
     // Database instance
     Database* db;
-
-    // Procceses instance for managing threads
-    Processes processes;
-
-    // All logos
-    std::string logo = """\n▗▖  ▗▖▗▄▄▄▖ ▗▄▄▖ ▗▄▄▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖▗▄▄▄▖▗▄▄▖ \n▐▛▚▞▜▌  █  ▐▌   ▐▌   ▐▌ ▐▌  █  ▐▌   ▐▌  ▐▌▐▌   ▐▌ ▐▌\n▐▌  ▐▌  █   ▝▀▚▖▐▌   ▐▛▀▜▌  █  ▐▛▀▀▘▐▌  ▐▌▐▛▀▀▘▐▛▀▚▖\n▐▌  ▐▌▗▄█▄▖▗▄▄▞▘▝▚▄▄▖▐▌ ▐▌▗▄█▄▖▐▙▄▄▖ ▝▚▞▘ ▐▙▄▄▖▐▌ ▐▌""";
-    std::string logo2 = """\n▗▖  ▗▖▗▄▄▄▖ ▗▄▄▖ ▗▄▄▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖▗▄▄▄▖▗▄▄▖ \n▐▛▚▞▜▌  █  ▐▌   ▐▌   ▐▌ ▐▌  █  ▐▌   ▐▌  ▐▌▐▌   ▐▌ ▐▌\n▐▌  ▐▌  █   ▝▀▚▖▐▌   ▐▛▀▜▌  █  ▐▛▀▀▘▐▌  ▐▌▐▛▀▀▘▐▛▀▚▖\n▐▌  ▐▌▗▄█▄▖▗▄▄▞▘▝▚▄▄▖▐▌ ▐▌▗▄█▄▖▐▙▄▄▖ ▝▚▞▘ ▐▙▄▄▖▐▌ ▐▌ ▄""";
-    std::string logo3 = """\n▗▖  ▗▖▗▄▄▄▖ ▗▄▄▖ ▗▄▄▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖▗▄▄▄▖▗▄▄▖ \n▐▛▚▞▜▌  █  ▐▌   ▐▌   ▐▌ ▐▌  █  ▐▌   ▐▌  ▐▌▐▌   ▐▌ ▐▌\n▐▌  ▐▌  █   ▝▀▚▖▐▌   ▐▛▀▜▌  █  ▐▛▀▀▘▐▌  ▐▌▐▛▀▀▘▐▛▀▚▖\n▐▌  ▐▌▗▄█▄▖▗▄▄▞▘▝▚▄▄▖▐▌ ▐▌▗▄█▄▖▐▙▄▄▖ ▝▚▞▘ ▐▙▄▄▖▐▌ ▐▌ ▄ ▄""";
-    std::string line = """▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n""";
 };
 
 
