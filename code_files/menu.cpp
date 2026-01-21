@@ -139,6 +139,7 @@ void Menu::showFloodsMenu() {
 
         switch(choice){
             case 1: {
+                std::cout << C_YELLOW << "\n[!] Type 'q' at any prompt to cancel." << C_RESET << std::endl;
                 std::string target_ip_str;
                 if (!get_input("Target IP: ", target_ip_str)) break;
                 const char* target_ip = target_ip_str.c_str(); // Convert to const char*
@@ -222,6 +223,7 @@ void Menu::showSpoofingsMenu() {
                     std::this_thread::sleep_for(std::chrono::seconds(2));
                 } 
                 else {
+                    std::cout << C_YELLOW << "\n[!] Type 'q' at any prompt to cancel." << C_RESET << std::endl;
                     // 1. Get Interface
                     const char* iface = helper.get_iface();
                     std::string iface_str = std::string(iface);
