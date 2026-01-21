@@ -1,10 +1,22 @@
 #include "headers/database.h"
 #include <ctime>
 
+// ANSI Colors
+#define C_RESET       "\033[0m"
+#define C_RED         "\033[1;31m"
+#define C_GREEN       "\033[1;32m"
+#define C_YELLOW      "\033[1;33m"
+#define C_BLUE        "\033[1;34m"
+#define C_MAGENTA     "\033[1;35m"
+#define C_CYAN        "\033[1;36m"
+#define C_BOLD        "\033[1m"
+
 // Callback function used by sqlite3_exec to print results
 static int callback(void* NotUsed, int argc, char** argv, char** azColName) {
     for (int i = 0; i < argc; i++) {
-        std::cout << azColName[i] << ": " << (argv[i] ? argv[i] : "NULL") << " | ";
+        std::cout << C_CYAN << azColName[i] << ": " << C_RESET 
+                  << C_YELLOW << (argv[i] ? argv[i] : "NULL") << C_RESET;
+        if (i < argc - 1) std::cout << C_MAGENTA << " | " << C_RESET;
     }
     std::cout << std::endl;
     return 0;
@@ -56,12 +68,15 @@ void Database::print_history() {
     const char* sql = "SELECT * from ATTACKS";
     char* zErrMsg = 0;
     
-    std::cout << "\n=== ATTACK HISTORY LOG ===" << std::endl;
+    std::cout << C_BLUE << "\n========================================" << C_RESET << std::endl;
+    std::cout << C_BOLD << "           ATTACK HISTORY               " << C_RESET << std::endl;
+    std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+
     int rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
     
     if (rc != SQLITE_OK) {
-        std::cerr << "SQL error: " << zErrMsg << std::endl;
+        std::cerr << C_RED << "SQL error: " << zErrMsg << C_RESET << std::endl;
         sqlite3_free(zErrMsg);
     }
-    std::cout << "==========================\n" << std::endl;
+    std::cout << C_BLUE << "========================================\n" << C_RESET << std::endl;
 }
