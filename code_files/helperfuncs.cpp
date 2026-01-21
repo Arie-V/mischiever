@@ -1,4 +1,8 @@
 #include "headers/helperfuncs.h"
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 void HelperFunctions::clearScreen(){
     #ifdef _WIN32
@@ -33,6 +37,28 @@ const char* HelperFunctions::get_iface() {
 
     freeifaddrs(ifaddr); // Free memory
     return iface_name;
+}
+
+std::string HelperFunctions::get_local_ip(const char* iface) {
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    struct ifreq ifr;
+    
+    // Set the interface name (e.g., "eth0")
+    ifr.ifr_addr.sa_family = AF_INET;
+    strncpy(ifr.ifr_name, iface, IFNAMSIZ-1);
+
+    std::string ip_str = "";
+
+    // Ask the kernel for the address
+    if (ioctl(fd, SIOCGIFADDR, &ifr) == 0) {
+        struct sockaddr_in* ipaddr = (struct sockaddr_in*)&ifr.ifr_addr;
+        ip_str = inet_ntoa(ipaddr->sin_addr);
+    } else {
+        ip_str = "Unknown";
+    }
+
+    close(fd);
+    return ip_str;
 }
 
 std::string HelperFunctions::get_mac_from_ip(std::string ip_addr) {

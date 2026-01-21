@@ -168,9 +168,13 @@ void Menu::selectAttackType(){
                                                     target_mac_str.c_str());
                     });
 
-                    // Log the attack to Database (NEW LINE)
-                    // Using "ARP Spoofing" as the type, and passing the target IP.
-                    this->db->log_attack("ARP Spoofing", "192.168.x.x (You)", target_ip_str);
+                    // --- DYNAMIC LOGGING UPDATE ---
+                    // 1. Get your real IP
+                    std::string my_ip = helper.get_local_ip(iface);
+                    // 2. Create the source string (e.g., "192.168.37.132 (You)")
+                    std::string source_log = my_ip + " (You)";
+                    // 3. Log it
+                    this->db->log_attack("ARP Spoofing", source_log, target_ip_str);
 
                     attack_thread.detach();
                 }
