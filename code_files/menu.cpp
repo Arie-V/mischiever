@@ -111,8 +111,13 @@ void Menu::selectAttackType(){
                     delete syn_attack;
                 });
                 
-                // Log the attack
-                this->db->log_attack("SYN Flood", "192.168.x.x (You)", target_ip_str);
+                // 1. Get your real IP
+                const char* iface = helper.get_iface();
+                std::string my_ip = helper.get_local_ip(iface);
+                // 2. Create the source string (e.g., "192.168.37.132 (You)")
+                std::string source_log = my_ip + " (You)";
+                // 3. Log it
+                this->db->log_attack("SYN Flood", source_log, target_ip_str);
 
                 t.detach(); // Allows the menu to keep running while attack happens
                 std::cout << "[+] Attack launched!" << std::endl;
@@ -168,7 +173,6 @@ void Menu::selectAttackType(){
                                                     target_mac_str.c_str());
                     });
 
-                    // --- DYNAMIC LOGGING UPDATE ---
                     // 1. Get your real IP
                     std::string my_ip = helper.get_local_ip(iface);
                     // 2. Create the source string (e.g., "192.168.37.132 (You)")
