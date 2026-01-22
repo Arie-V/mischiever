@@ -1,5 +1,4 @@
 #include "headers/menu.h"
-#include <limits>
 
 // ANSI Colors
 #define C_RESET       "\033[0m"
@@ -181,7 +180,29 @@ void Menu::showFloodsMenu() {
                 
             }
             case 2: {
-                std::cout << C_YELLOW << "Not implemented yet." << C_RESET << std::endl;
+                std::cout << C_YELLOW << "\n[!] Type 'q' at any prompt to cancel." << C_RESET << std::endl;
+                std::string target_ip_str;
+                if (!get_input("Target IP: ", target_ip_str)) break;
+
+                int packet_count;
+                if (!get_input("Packet Count: ", packet_count)) break;
+
+                std::string* safe_ip = new std::string(target_ip_str);
+                ICMP* icmp_tool = new ICMP();
+
+                std::thread attack_thread([icmp_tool, safe_ip, packet_count]() {
+                    icmp_tool->send_icmp_flood(safe_ip->c_str(), packet_count);
+                    delete safe_ip;
+                    delete icmp_tool;
+                });
+
+                const char* iface = helper.get_iface();
+                std::string my_ip = helper.get_local_ip(iface);
+                std::string source_log = my_ip + " (You)";
+                this->db->log_attack("ICMP Flood", source_log, target_ip_str);
+
+                attack_thread.detach();
+                std::cout << C_GREEN << "[+] Attack launched!" << C_RESET << std::endl;
                 sleep(1);
                 break;
             }
