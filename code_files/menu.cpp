@@ -32,7 +32,10 @@ Menu::~Menu() {}
 void Menu::run() {
     print_logo();
 
-    // Load all available attack modules
+    // [PLATFORM ARCHITECTURE]
+    // Instead of creating tools on demand, we load them all into an "Inventory" (vector) at startup.
+    // This allows us to add 50 new attacks without changing the main loop logic.
+    // We use unique_ptr to handle memory automatically (no more manual 'delete').
     attack_modules.push_back(std::unique_ptr<SYN>(new SYN()));
     attack_modules.push_back(std::unique_ptr<ARP>(new ARP()));
     attack_modules.push_back(std::unique_ptr<ICMP>(new ICMP()));
@@ -47,7 +50,7 @@ void Menu::run() {
     }
     
     int choice = -1;
-    while (choice != 4) {
+    while (choice != 5) {
         display_main_menu();
         
         std::cin >> choice;
@@ -60,8 +63,9 @@ void Menu::run() {
         switch (choice) {
             case 1: show_attack_modules_menu(); break;
             case 2: show_attack_history(); break;
-            case 3: session.helper->displayImage("misc/cat.jpg"); break; // Easter egg
-            case 4: break; // Exit
+            case 3: set_target_config(); break;
+            case 4: session.helper->displayImage("misc/cat.jpg"); break; // Easter egg
+            case 5: break; // Exit
             default:
                 std::cout << C_RED << "Invalid choice. Please try again." << C_RESET << std::endl;
                 sleep(1);
@@ -85,24 +89,31 @@ void Menu::print_logo() {
                                              
     )" << C_RESET << std::endl;
     std::cout << C_CYAN << "      The Network Swiss Army Knife" << C_RESET << "\n" << std::endl;
-    sleep(2);
+    sleep(1);
 }
 
 void Menu::display_main_menu_header() {
     session.helper->clearScreen();
-    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
     
-    // A clean, multi-line format guarantees perfect alignment
-    std::cout << C_CYAN << "  Interface : " << C_RESET 
-              << (session.interface.empty() ? C_YELLOW "[Not Set]" : C_GREEN + session.interface) << C_RESET;
+    // A nice wide separator
+    std::cout << C_BLUE << "================================================================================" << C_RESET << std::endl;
 
-    std::cout << C_CYAN << "  Target IP : " << C_RESET
-              << (session.target_ip.empty() ? C_YELLOW "[Not Set]" : C_GREEN + session.target_ip) << C_RESET;
+    // Helper lambda to handle "None" vs "Value" coloring cleanly
+    auto colorize = [](const std::string& val) {
+        // If empty -> Yellow "None", If set -> Green Value
+        return val.empty() ? (std::string(C_YELLOW) + "None" + C_RESET) : (std::string(C_GREEN) + val + C_RESET);
+    };
 
-    std::cout << C_CYAN << "  Gateway IP: " << C_RESET
-              << (session.gateway_ip.empty() ? C_YELLOW "[Not Set]" : C_GREEN + session.gateway_ip) << C_RESET << std::endl;
+    // The Single Line Dashboard
+    // Uses Blue Pipes " | " to visually separate the sections
+    std::cout << C_BOLD << " Interface: " << C_RESET << colorize(session.interface) 
+              << C_BLUE << "  |  " << C_RESET 
+              << C_BOLD << "Target IP: " << C_RESET << colorize(session.target_ip)
+              << C_BLUE << "  |  " << C_RESET 
+              << C_BOLD << "Gateway IP: " << C_RESET << colorize(session.gateway_ip) 
+              << std::endl;
 
-    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
+    std::cout << C_BLUE << "================================================================================" << C_RESET << std::endl;
 }
 
 void Menu::display_main_menu() {
@@ -111,8 +122,9 @@ void Menu::display_main_menu() {
     std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
     std::cout << C_GREEN << "[1]" << C_RESET << " Attack Modules" << std::endl;
     std::cout << C_GREEN << "[2]" << C_RESET << " Attack History" << std::endl;
-    std::cout << C_GREEN << "[3]" << C_RESET << " The Cat" << std::endl;
-    std::cout << C_GREEN << "[4]" << C_RESET << " Exit" << std::endl;
+    std::cout << C_GREEN << "[3]" << C_RESET << " Target Configuration" << std::endl;
+    std::cout << C_GREEN << "[4]" << C_RESET << " The Cat" << std::endl;
+    std::cout << C_GREEN << "[5]" << C_RESET << " Exit" << std::endl;
     std::cout << std::endl << C_BOLD << "mischiever > " << C_RESET;
 }
 
@@ -183,8 +195,13 @@ void Menu::show_floods_menu() {
                 continue;
         }
         
+        // NEW CODE (Smoother)
         if (selected_attack) {
-            set_target_config();
+            // Only ask for config if we genuinely don't have a target yet
+            if(session.target_ip.empty()) {
+                std::cout << C_YELLOW << "[!] Target not set. Redirecting to configuration..." << C_RESET << std::endl;
+                set_target_config();
+            }
             run_selected_attack(selected_attack);
         }
     }
@@ -225,10 +242,10 @@ void Menu::show_spoofings_menu() {
 
 void Menu::show_attack_history() {
     display_main_menu_header();
-    std::cout << C_BOLD << "           ATTACK HISTORY               " << C_RESET << std::endl;
-    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
+    std::cout << C_BOLD << "                            ATTACK HISTORY               " << C_RESET << std::endl;
+    std::cout << C_BLUE << "================================================================================================================================" << C_RESET << std::endl;
     session.db->print_history();
-    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
+    std::cout << C_BLUE << "================================================================================================================================" << C_RESET << std::endl;
     std::cout << "\nPress Enter to return..." << std::endl;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     std::cin.get();

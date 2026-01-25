@@ -67,16 +67,10 @@ void Database::log_attack(std::string type, std::string attacker_ip, std::string
 void Database::print_history() {
     const char* sql = "SELECT * from ATTACKS";
     char* zErrMsg = 0;
-    
-    std::cout << C_BLUE << "\n========================================" << C_RESET << std::endl;
-    std::cout << C_BOLD << "           ATTACK HISTORY               " << C_RESET << std::endl;
-    std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
-
     int rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
     
     if (rc != SQLITE_OK) {
         std::cerr << C_RED << "SQL error: " << zErrMsg << C_RESET << std::endl;
         sqlite3_free(zErrMsg);
     }
-    std::cout << C_BLUE << "========================================\n" << C_RESET << std::endl;
 }

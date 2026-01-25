@@ -29,7 +29,7 @@ void ARP::stop() {
         }
     }
     attack_threads.clear();
-    std::cout << get_name() << " stopped." << std::endl;
+    //std::cout << get_name() << " stopped." << std::endl;
 }
 
 void ARP::run(Session* session) {

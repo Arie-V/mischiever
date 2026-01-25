@@ -31,7 +31,7 @@ void SYN::stop() {
     if (attack_thread.joinable()) {
         attack_thread.join();
     }
-    std::cout << get_name() << " stopped." << std::endl;
+    //std::cout << get_name() << " stopped." << std::endl;
 }
 
 // Destructor ensures the thread is stopped and joined.
