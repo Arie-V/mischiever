@@ -1,6 +1,6 @@
 # Compiler and Flags
 CXX = g++
-CXXFLAGS = -Wall -std=c++11 -pthread -lpcap -lsqlite3
+CXXFLAGS = -Wall -std=c++14 -pthread -lpcap -lsqlite3
 
 # Target Executable
 TARGET = mischiever

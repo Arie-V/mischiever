@@ -1,14 +1,11 @@
-#include <iostream>
-#include <string>
 #include "code_files/headers/menu.h"
-#include "code_files/headers/database.h"
 
 int main() {
-    // 1. Initialize Database
-    Database db;
+    // Create the Menu object
+    Menu menu;
 
-    // 2. Pass DB to Menu and initialize it
-    Menu menu(&db); 
+    // Run the main application loop
+    menu.run();
 
     return 0;
 }

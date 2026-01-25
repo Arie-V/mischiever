@@ -1,47 +1,41 @@
 #ifndef MENU_H
 #define MENU_H
+
+#include <vector>
+#include <memory>
 #include <string>
-#include <iostream>
-#include <ctime>
-#include <unistd.h>
-#include <thread>
-#include <limits>
+
+#include "session.h"
+#include "attack_module.h"
 #include "helperfuncs.h"
-#include "syn.h"
-#include "arp.h"
-#include "database.h"
-#include "icmp.h"
 
 class Menu {
 public:
-    // Constructor
-    Menu(Database* database);
-
-    // Destructor
+    Menu();
     ~Menu();
 
-    void printLogo();
-    void printMenu();
-
-    void selectAttackType();
-    void funnyCatPicture();
-    
-private:
-    void showFloodsMenu();
-    void showSpoofingsMenu();
-    bool get_input(const std::string& prompt, std::string& output);
-    bool get_input(const std::string& prompt, int& output);
+    // The main entry point to run the application
+    void run();
 
 private:
-    // Helperfunctions instance for misc functions    
-    HelperFunctions helper;
+    // Application state
+    Session session;
+    std::vector<std::unique_ptr<AttackModule>> attack_modules;
 
-    // Made for ARP management (on/off)
-    ARP arp_tool;
+    // Main menu and header
+    void print_logo();
+    void display_main_menu_header();
+    void display_main_menu();
 
-    // Database instance
-    Database* db;
+    // Sub-menu navigation
+    void show_attack_modules_menu();
+    void show_floods_menu();
+    void show_spoofings_menu();
+    void show_attack_history();
+
+    // Core logic
+    void set_target_config();
+    void run_selected_attack(AttackModule* attack);
 };
-
 
 #endif // MENU_H

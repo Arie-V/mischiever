@@ -1,44 +1,36 @@
 #ifndef ARP_H
 #define ARP_H
 
-#include <iostream>
-#include <cstring>
-#include <cstdlib>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/if_ether.h>
-#include <netinet/ip.h>
-#include <arpa/inet.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <linux/if_packet.h>
-#include <thread>
 #include <string>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <chrono>   
-#include <mutex>
-#include <atomic> // Need this for the stop flag
-#include <cstdint> // standard types like uint8_t
+#include <thread>
+#include <atomic>
+#include <vector>
 
-class ARP {
-    public:
-        // Control flag to stop the attack
-        std::atomic<bool> attacking;
+#include "../headers/attack_module.h"
 
-        // Constructor to initialize flag
-        ARP() { attacking = false; }
+class ARP : public AttackModule {
+public:
+    ARP();
+    ~ARP();
 
-        // Function to get the Gateway IP automatically
-        std::string get_default_gateway(const char* iface);
+    // Implementation of the AttackModule interface
+    void run(Session* session) override;
+    void stop() override;
+    std::string get_name() override;
 
-        // Function to send an ARP spoofing packet
-        void send_arp_spoof(const char* iface, const char* target_ip, const char* spoof_ip, const char* target_mac_str);
-    private:
+private:
+    std::vector<std::thread> attack_threads;
+    std::atomic<bool> stop_flag;
+
+    // The core ARP spoofing logic, now runs in a loop
+    void spoof_loop(std::string iface, std::string target_ip, std::string spoof_ip, std::string target_mac);
+
+    // Private helpers
+    void parse_mac(const char* mac_str, uint8_t* mac_out);
+    void get_my_mac(const char* iface, uint8_t* mac);
 
     // Structure for ARP header
-    struct __attribute__((packed)) arp_header { 
+    struct __attribute__((packed)) arp_header {
         uint16_t htype;
         uint16_t ptype;
         uint8_t hlen;
@@ -49,12 +41,6 @@ class ARP {
         uint8_t tha[6];
         uint8_t tpa[4];
     };
-
-    // Helper to convert "00:11:22..." string to bytes
-    void parse_mac(const char* mac_str, uint8_t* mac_out);
-
-    // Function to get the MAC address of the attacker's network interface
-    void get_mac_address(const char* iface, uint8_t* mac);
 };
 
 #endif // ARP_H

@@ -1,6 +1,16 @@
-#include "headers/menu.h"
+#include <iostream>
+#include <limits>
+#include <unistd.h> // for sleep()
+#include <cstdlib>  // for srand(), time()
+#include <ctime>    // for time()
+#include <iomanip> // For std::setw
 
-// ANSI Colors
+#include "headers/menu.h"
+#include "headers/syn.h"
+#include "headers/arp.h"
+#include "headers/icmp.h"
+
+// --- ANSI Color Codes ---
 #define C_RESET       "\033[0m"
 #define C_RED         "\033[1;31m"
 #define C_GREEN       "\033[1;32m"
@@ -10,20 +20,62 @@
 #define C_CYAN        "\033[1;36m"
 #define C_BOLD        "\033[1m"
 
-// Constructor
-Menu::Menu(Database* database){
-    // Initialize database
-    this->db = database;
-    // Print logo and menu when menu is created
-    printLogo();
-    printMenu();
+// --- Constructor & Destructor ---
+Menu::Menu() {
+    // Seed random number generator
+    srand(time(0));
 }
 
-// Destructor
-Menu::~Menu(){}; 
+Menu::~Menu() {}
 
-void Menu::printLogo(){
-    this->helper.clearScreen();
+// --- Main Application Logic ---
+void Menu::run() {
+    print_logo();
+
+    // Load all available attack modules
+    attack_modules.push_back(std::unique_ptr<SYN>(new SYN()));
+    attack_modules.push_back(std::unique_ptr<ARP>(new ARP()));
+    attack_modules.push_back(std::unique_ptr<ICMP>(new ICMP()));
+
+    // Set default interface automatically if possible
+    const char* default_iface = session.helper->get_iface();
+    if (default_iface) {
+        session.interface = std::string(default_iface);
+    } else {
+        std::cout << C_RED << "Could not detect default interface. Please set one in Target Configuration." << C_RESET << std::endl;
+        sleep(2);
+    }
+    
+    int choice = -1;
+    while (choice != 4) {
+        display_main_menu();
+        
+        std::cin >> choice;
+        if (std::cin.fail()) {
+            choice = -1; // Invalid input
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
+
+        switch (choice) {
+            case 1: show_attack_modules_menu(); break;
+            case 2: show_attack_history(); break;
+            case 3: session.helper->displayImage("misc/cat.jpg"); break; // Easter egg
+            case 4: break; // Exit
+            default:
+                std::cout << C_RED << "Invalid choice. Please try again." << C_RESET << std::endl;
+                sleep(1);
+                break;
+        }
+    }
+
+    std::cout << C_YELLOW << "Exiting Mischiever." << C_RESET << std::endl;
+}
+
+// --- Menu Display Functions ---
+
+void Menu::print_logo() {
+    session.helper->clearScreen();
     std::cout << C_MAGENTA << R"(
     __  ____       __    _                     
    /  |/  (_)_____/ /_  (_)__ _   _____  _____
@@ -36,78 +88,56 @@ void Menu::printLogo(){
     sleep(2);
 }
 
-void Menu::printMenu(){
-    while(true){
-        this->helper.clearScreen();
-        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
-        std::cout << C_BOLD << "            MAIN MENU                   " << C_RESET << std::endl;
-        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
-        std::cout << C_GREEN << "[1]" << C_RESET << " Attack Modules" << std::endl;
-        std::cout << C_GREEN << "[2]" << C_RESET << " Attack History" << std::endl;
-        std::cout << C_GREEN << "[3]" << C_RESET << " The Cat" << std::endl;
-        std::cout << C_GREEN << "[4]" << C_RESET << " Exit" << std::endl;
-        std::cout << std::endl << C_BOLD << "mischiever > " << C_RESET;
+void Menu::display_main_menu_header() {
+    session.helper->clearScreen();
+    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
+    
+    // A clean, multi-line format guarantees perfect alignment
+    std::cout << C_CYAN << "  Interface : " << C_RESET 
+              << (session.interface.empty() ? C_YELLOW "[Not Set]" : C_GREEN + session.interface) << C_RESET;
 
-        // Get input
-        int choice;
-        if (!(std::cin >> choice)) {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            continue;
-        }
+    std::cout << C_CYAN << "  Target IP : " << C_RESET
+              << (session.target_ip.empty() ? C_YELLOW "[Not Set]" : C_GREEN + session.target_ip) << C_RESET;
 
-        // Handle choice
-        switch(choice){
-            case 1:
-                selectAttackType();
-                break;
-            case 2:
-                // Manage active attacks
-                this->db->print_history();
-                std::cout << "Press Enter to return...";
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                std::cin.get();
-                break;
-            case 3:
-                funnyCatPicture();
-                break;
-            case 4:
-                exit(0);
-                break;
-            default:
-                std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
-                sleep(1);
-                break;
-        }
-    }
+    std::cout << C_CYAN << "  Gateway IP: " << C_RESET
+              << (session.gateway_ip.empty() ? C_YELLOW "[Not Set]" : C_GREEN + session.gateway_ip) << C_RESET << std::endl;
+
+    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
 }
 
-void Menu::selectAttackType(){
-    bool flag = true;
-    while(flag){
-        this->helper.clearScreen();
-        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+void Menu::display_main_menu() {
+    display_main_menu_header();
+    std::cout << C_BOLD << "            MAIN MENU                   " << C_RESET << std::endl;
+    std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+    std::cout << C_GREEN << "[1]" << C_RESET << " Attack Modules" << std::endl;
+    std::cout << C_GREEN << "[2]" << C_RESET << " Attack History" << std::endl;
+    std::cout << C_GREEN << "[3]" << C_RESET << " The Cat" << std::endl;
+    std::cout << C_GREEN << "[4]" << C_RESET << " Exit" << std::endl;
+    std::cout << std::endl << C_BOLD << "mischiever > " << C_RESET;
+}
+
+void Menu::show_attack_modules_menu() {
+    int choice = -1;
+    while (choice != 3) {
+        display_main_menu_header();
         std::cout << C_BOLD << "           ATTACK MODULES               " << C_RESET << std::endl;
         std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
-
         std::cout << C_GREEN << "[1]" << C_RESET << " Floods" << std::endl;
         std::cout << C_GREEN << "[2]" << C_RESET << " Spoofings" << std::endl;
         std::cout << C_GREEN << "[3]" << C_RESET << " Back" << std::endl;
         std::cout << std::endl << C_BOLD << "mischiever/modules > " << C_RESET;
 
-        // Get input
-        int choice;
-        if (!(std::cin >> choice)) {
+        std::cin >> choice;
+        if (std::cin.fail()) {
+            choice = -1;
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            continue;
         }
 
-        // Handle choice
-        switch(choice){
-            case 1: showFloodsMenu(); break;
-            case 2: showSpoofingsMenu(); break;
-            case 3: flag = false; break;
+        switch (choice) {
+            case 1: show_floods_menu(); break;
+            case 2: show_spoofings_menu(); break;
+            case 3: break;
             default:
                 std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
                 sleep(1);
@@ -116,222 +146,171 @@ void Menu::selectAttackType(){
     }
 }
 
-void Menu::showFloodsMenu() {
-    bool flag = true;
-    while(flag){
-        this->helper.clearScreen();
-        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+void Menu::show_floods_menu() {
+    int choice = -1;
+    while (choice != 3) {
+        display_main_menu_header();
         std::cout << C_BOLD << "           FLOOD ATTACKS                " << C_RESET << std::endl;
         std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
-
         std::cout << C_GREEN << "[1]" << C_RESET << " SYN Flood" << std::endl;
         std::cout << C_GREEN << "[2]" << C_RESET << " ICMP Ping Flood" << std::endl;
         std::cout << C_GREEN << "[3]" << C_RESET << " Back" << std::endl;
         std::cout << std::endl << C_BOLD << "mischiever/modules/floods > " << C_RESET;
-
-        int choice;
-        if (!(std::cin >> choice)) {
+        
+        std::cin >> choice;
+        if (std::cin.fail()) {
+            choice = -1;
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            continue;
         }
 
-        switch(choice){
-            case 1: {
-                std::cout << C_YELLOW << "\n[!] Type 'q' at any prompt to cancel." << C_RESET << std::endl;
-                std::string target_ip_str;
-                if (!get_input("Target IP: ", target_ip_str)) break;
-                const char* target_ip = target_ip_str.c_str(); // Convert to const char*
-
-                int target_port;
-                if (!get_input("Target Port: ", target_port)) break;
-
-                int packet_count;
-                if (!get_input("Packet Count: ", packet_count)) break;
-
-                // Create strings on Heap or pass by value to thread to ensure they survive
-                std::string* safe_ip = new std::string(target_ip_str);
-                
-                // Create the object on the Heap so it survives the scope
-                SYN* syn_attack = new SYN(); 
-
-                // Launch thread and Detach
-                std::thread t([syn_attack, safe_ip, target_port, packet_count]() {
-                    // Run the flood
-                    syn_attack->syn_flood(safe_ip->c_str(), target_port, packet_count);
-                    
-                    // Cleanup memory when done (Self-destruct)
-                    delete safe_ip;
-                    delete syn_attack;
-                });
-                
-                // 1. Get your real IP
-                const char* iface = helper.get_iface();
-                std::string my_ip = helper.get_local_ip(iface);
-                // 2. Create the source string (e.g., "192.168.37.132 (You)")
-                std::string source_log = my_ip + " (You)";
-                // 3. Log it
-                this->db->log_attack("SYN Flood", source_log, target_ip_str);
-
-                t.detach(); // Allows the menu to keep running while attack happens
-                std::cout << C_GREEN << "[+] Attack launched!" << C_RESET << std::endl;
-                sleep(1);
+        AttackModule* selected_attack = nullptr;
+        switch (choice) {
+            case 1: // SYN
+                for (const auto& mod : attack_modules) {
+                    if (mod->get_name() == "SYN Flood") selected_attack = mod.get();
+                }
                 break;
-                
-            }
-            case 2: {
-                std::cout << C_YELLOW << "\n[!] Type 'q' at any prompt to cancel." << C_RESET << std::endl;
-                std::string target_ip_str;
-                if (!get_input("Target IP: ", target_ip_str)) break;
-
-                int packet_count;
-                if (!get_input("Packet Count: ", packet_count)) break;
-
-                std::string* safe_ip = new std::string(target_ip_str);
-                ICMP* icmp_tool = new ICMP();
-
-                std::thread attack_thread([icmp_tool, safe_ip, packet_count]() {
-                    icmp_tool->send_icmp_flood(safe_ip->c_str(), packet_count);
-                    delete safe_ip;
-                    delete icmp_tool;
-                });
-
-                const char* iface = helper.get_iface();
-                std::string my_ip = helper.get_local_ip(iface);
-                std::string source_log = my_ip + " (You)";
-                this->db->log_attack("ICMP Flood", source_log, target_ip_str);
-
-                attack_thread.detach();
-                std::cout << C_GREEN << "[+] Attack launched!" << C_RESET << std::endl;
-                sleep(1);
+            case 2: // ICMP
+                for (const auto& mod : attack_modules) {
+                    if (mod->get_name() == "ICMP Flood") selected_attack = mod.get();
+                }
                 break;
-            }
-            case 3: flag = false; break;
+            case 3: return;
             default:
                 std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
                 sleep(1);
-                break;
+                continue;
+        }
+        
+        if (selected_attack) {
+            set_target_config();
+            run_selected_attack(selected_attack);
         }
     }
 }
 
-void Menu::showSpoofingsMenu() {
-    bool flag = true;
-    while(flag){
-        this->helper.clearScreen();
-        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+void Menu::show_spoofings_menu() {
+    int choice = -1;
+    while (choice != 2) {
+        display_main_menu_header();
         std::cout << C_BOLD << "           SPOOFING ATTACKS             " << C_RESET << std::endl;
         std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
-
-        std::string arp_status = this->arp_tool.attacking ? (std::string(C_GREEN) + "RUNNING" + C_RESET) : (std::string(C_RED) + "STOPPED" + C_RESET);
-
-        std::cout << C_GREEN << "[1]" << C_RESET << " ARP Spoofing [" << arp_status << "]" << std::endl;
+        std::cout << C_GREEN << "[1]" << C_RESET << " ARP Spoof" << std::endl;
         std::cout << C_GREEN << "[2]" << C_RESET << " Back" << std::endl;
         std::cout << std::endl << C_BOLD << "mischiever/modules/spoofings > " << C_RESET;
 
-        int choice;
-        if (!(std::cin >> choice)) {
+        std::cin >> choice;
+        if (std::cin.fail()) {
+            choice = -1;
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            continue;
         }
 
-        switch(choice){
-            case 1: {
-                if (this->arp_tool.attacking) {
-                    this->arp_tool.attacking = false;
-                    std::cout << C_YELLOW << "\n[!] Stopping Attack..." << C_RESET << std::endl;
-                    std::this_thread::sleep_for(std::chrono::seconds(2));
-                } 
-                else {
-                    std::cout << C_YELLOW << "\n[!] Type 'q' at any prompt to cancel." << C_RESET << std::endl;
-                    // 1. Get Interface
-                    const char* iface = helper.get_iface();
-                    std::string iface_str = std::string(iface);
-                    std::cout << C_CYAN << "Interface: " << C_RESET << iface_str << std::endl;
-
-                    // 2. Get Target IP (The ONLY manual input)
-                    std::string target_ip_str;
-                    if (!get_input("Target IP: ", target_ip_str)) break;
-
-                    // 3. Auto-Detect Gateway IP
-                    std::cout << C_YELLOW << "[*] Detecting Gateway IP... " << C_RESET;
-                    std::string spoof_ip_str = this->arp_tool.get_default_gateway(iface);
-                    if (spoof_ip_str.empty()) {
-                        std::cout << C_RED << "Failed! " << C_RESET;
-                        if (!get_input("Enter manually: ", spoof_ip_str)) break;
-                    } else {
-                        std::cout << C_GREEN << spoof_ip_str << " (Found)" << C_RESET << std::endl;
-                    }
-
-                    // 4. Auto-Detect Target MAC
-                    std::cout << C_YELLOW << "[*] Resolving Target MAC... " << C_RESET;
-                    std::string target_mac_str = helper.get_mac_from_ip(target_ip_str);
-                    
-                    if (target_mac_str.empty()) {
-                        std::cout << C_RED << "Failed! " << C_RESET;
-                        if (!get_input("Enter MAC manually: ", target_mac_str)) break;
-                    } else {
-                        std::cout << C_GREEN << target_mac_str << " (Found)" << C_RESET << std::endl;
-                    }
-
-                    std::cout << C_GREEN << "\n[+] Launching Stealth Unicast Attack..." << C_RESET << std::endl;
-
-                    // Launch Thread
-                    std::thread attack_thread([this, iface_str, target_ip_str, spoof_ip_str, target_mac_str]() {
-                        this->arp_tool.send_arp_spoof(iface_str.c_str(), 
-                                                    target_ip_str.c_str(), 
-                                                    spoof_ip_str.c_str(), 
-                                                    target_mac_str.c_str());
-                    });
-
-                    // 1. Get your real IP
-                    std::string my_ip = helper.get_local_ip(iface);
-                    // 2. Create the source string (e.g., "192.168.37.132 (You)")
-                    std::string source_log = my_ip + " (You)";
-                    // 3. Log it
-                    this->db->log_attack("ARP Spoofing", source_log, target_ip_str);
-
-                    attack_thread.detach();
-                    sleep(1);
-                }
-                break;
+        if (choice == 1) {
+            AttackModule* arp_attack = nullptr;
+            for (const auto& mod : attack_modules) {
+                if (mod->get_name() == "ARP Spoof") arp_attack = mod.get();
             }
-            case 2: flag = false; break;
-            default: {
-                std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
-                sleep(1);
-                break;
+            if (arp_attack) {
+                set_target_config();
+                run_selected_attack(arp_attack);
             }
+        } else if (choice != 2) {
+             std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
+             sleep(1);
         }
     }
 }
 
-void Menu::funnyCatPicture(){
-    // Display funny cat picture
-    this->helper.displayImage("misc/cat.jpg");
+void Menu::show_attack_history() {
+    display_main_menu_header();
+    std::cout << C_BOLD << "           ATTACK HISTORY               " << C_RESET << std::endl;
+    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
+    session.db->print_history();
+    std::cout << C_BLUE << "======================================================================" << C_RESET << std::endl;
+    std::cout << "\nPress Enter to return..." << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cin.get();
 }
 
-bool Menu::get_input(const std::string& prompt, std::string& output) {
-    std::cout << C_CYAN << prompt << C_RESET;
-    std::cin >> output;
-    if (output == "q" || output == "cancel" || output == "back") {
-        std::cout << C_RED << "- Cancelled" << C_RESET << std::endl;
-        sleep(1);
-        return false;
+// --- Core Logic ---
+
+void Menu::set_target_config() {
+    display_main_menu_header();
+    std::cout << C_BOLD << "         TARGET CONFIGURATION           " << C_RESET << std::endl;
+    std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+    std::cout << C_YELLOW << "[!] Press Enter to keep current value." << C_RESET << std::endl;
+    std::cout << C_YELLOW << "[!] Type 'resolve' in MAC fields to auto-discover." << C_RESET << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    std::string temp;
+
+    std::cout << C_CYAN << "Target IP [" << (session.target_ip.empty() ? "None" : session.target_ip) << "]: " << C_RESET;
+    std::getline(std::cin, temp);
+    if (!temp.empty()) session.target_ip = temp;
+
+    std::cout << C_CYAN << "Target MAC [" << (session.target_mac.empty() ? "None" : session.target_mac) << "]: " << C_RESET;
+    std::getline(std::cin, temp);
+    if (!temp.empty()) {
+        if (temp == "resolve") {
+            std::cout << C_YELLOW << "[*] Resolving Target MAC... " << C_RESET;
+            std::string mac = session.helper->get_mac_from_ip(session.target_ip);
+            if (!mac.empty()) {
+                session.target_mac = mac;
+                std::cout << C_GREEN << mac << " (Found)" << C_RESET << std::endl;
+            } else {
+                std::cout << C_RED << "Failed! Could not resolve." << C_RESET << std::endl;
+            }
+        } else {
+           session.target_mac = temp;
+        }
     }
-    return true;
+    
+    std::cout << C_CYAN << "Gateway IP [" << (session.gateway_ip.empty() ? "None" : session.gateway_ip) << "]: " << C_RESET;
+    std::getline(std::cin, temp);
+    if (!temp.empty()) session.gateway_ip = temp;
+
+    std::cout << C_CYAN << "Gateway MAC [" << (session.gateway_mac.empty() ? "None" : session.gateway_mac) << "]: " << C_RESET;
+    std::getline(std::cin, temp);
+     if (!temp.empty()) {
+        if (temp == "resolve") {
+            std::cout << C_YELLOW << "[*] Resolving Gateway MAC... " << C_RESET;
+            std::string mac = session.helper->get_mac_from_ip(session.gateway_ip);
+            if (!mac.empty()) {
+                session.gateway_mac = mac;
+                std::cout << C_GREEN << mac << " (Found)" << C_RESET << std::endl;
+            } else {
+                std::cout << C_RED << "Failed! Could not resolve." << C_RESET << std::endl;
+            }
+        } else {
+           session.gateway_mac = temp;
+        }
+    }
+    std::cout << C_GREEN << "\nConfiguration updated. Returning to menu." << C_RESET << std::endl;
+    sleep(2);
 }
 
-bool Menu::get_input(const std::string& prompt, int& output) {
-    std::string str_val;
-    if (!get_input(prompt, str_val)) return false;
-    try {
-        output = std::stoi(str_val);
-    } catch (...) {
-        std::cout << C_RED << "Invalid input." << C_RESET << std::endl;
-        sleep(1);
-        return false;
+void Menu::run_selected_attack(AttackModule* attack) {
+    if (!attack) return;
+    if (session.target_ip.empty()) {
+        std::cerr << C_RED << "Target IP is not set! Please configure it first." << C_RESET << std::endl;
+        sleep(2);
+        return;
     }
-    return true;
+
+    // Log the attack before running
+    std::string my_ip = session.helper->get_local_ip(session.interface.c_str());
+    std::string source_log = my_ip.empty() ? "Unknown (You)" : my_ip + " (You)";
+    session.db->log_attack(attack->get_name(), source_log, session.target_ip);
+    
+    attack->run(&session);
+    
+    std::cout << C_YELLOW << "\nAttack is running. Press [Enter] to stop it." << C_RESET << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cin.get(); 
+
+    attack->stop();
+    std::cout << C_GREEN << "Attack stopped." << C_RESET << std::endl;
+    sleep(1);
 }

