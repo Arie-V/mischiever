@@ -20,6 +20,7 @@ public:
 private:
     // Application state
     Session session;
+    // Collection of available attack modules
     std::vector<std::unique_ptr<AttackModule>> attack_modules;
 
     // Main menu and header

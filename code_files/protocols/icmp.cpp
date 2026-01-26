@@ -30,12 +30,12 @@ void ICMP::stop() {
 
 void ICMP::run(Session* session) {
     if (session->target_ip.empty()) {
-        std::cerr << "Target IP is not set. Please configure it in the main menu." << std::endl;
+        std::cerr << C_YELLOW << "Target IP is not set. Please configure it in the main menu." << C_RESET << std::endl;
         return;
     }
     stop_flag = false;
     attack_thread = std::thread(&ICMP::flood_loop, this, session->target_ip);
-    std::cout << get_name() << " started..." << std::endl;
+    std::cout << C_BOLD << get_name() << " started..." << C_RESET << std::endl;
 }
 
 void ICMP::flood_loop(std::string target_ip_str) {

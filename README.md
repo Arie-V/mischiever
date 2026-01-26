@@ -1,9 +1,9 @@
 # Mischiever 😈
 ### The Network Swiss Army Knife
 
-**Mischiever** is a lightweight, multithreaded offensive cybersecurity tool built in C++ from scratch. Unlike script-based tools, Mischiever constructs network packets byte-by-byte using raw sockets, giving the user complete control over Layer 2 (Ethernet) and Layer 3 (IP) headers.
+**Mischiever** is a modular, multithreaded offensive cybersecurity **platform** built in C++ from scratch. Unlike script-based tools, Mischiever is engineered as a unified framework where attack modules share a central "brain" (Session State) to coordinate network manipulation.
 
-It is designed to demonstrate low-level network manipulation, protocol stress-testing, and security filter evasion in a controlled environment.
+It constructs network packets byte-by-byte using raw sockets, giving the user complete control over Layer 2 (Ethernet) and Layer 3 (IP) headers to bypass standard security filters.
 
 ---
 
@@ -13,28 +13,38 @@ The author is not responsible for any misuse, damage, or illegal activity caused
 
 ---
 
-### ⚔️ Capabilities
+### 🏛️ Platform Architecture
+Mischiever is not just a collection of scripts; it is an Object-Oriented C2 (Command & Control) framework designed for scalability and state persistence.
 
-#### 1. ARP Cache Poisoning (Stealth Mode)
-* **Technique:** Implements a **Unicast ARP Reply** attack to bypass modern switch security (Dynamic ARP Inspection) and virtualization filters (VMware/VirtualBox).
-* **Impact:** successfully intercepts traffic (Man-in-the-Middle) by tricking the victim into mapping the Router's IP to the Attacker's MAC address.
-* **Automation:** Auto-detects the target's MAC address and the local Gateway IP, falling back to heuristic detection in Host-Only networks.
-
-#### 2. SYN Flood (DoS)
-* **Technique:** Uses **Raw Sockets (`IP_HDRINCL`)** to generate thousands of TCP packets with randomized spoofed Source IPs.
-* **Impact:** Exhausts the target's TCB (Transmission Control Block) memory by leaving connections in a "HALF_OPEN" state, preventing legitimate users from connecting.
-
-#### 3. ICMP Ping Flood (DoS)
-* **Technique:** Blasts the target with ICMP Echo Request (Type 8) packets at maximum throughput.
-* **Impact:** Consumes target CPU and bandwidth by forcing the OS to process and reply to every packet.
+* **🧠 Session-Based State Management:** Implements a central `Session` structure ("The Brain") that holds global network truths (Target IP, MAC, Gateway). Configuration is set once and instantly available to all loaded modules.
+* **🔌 Polymorphic Design:** Utilizes an abstract `AttackModule` base class to enforce a unified interface (`run`, `stop`, `get_name`) across all tools. This allows the core engine to manage disparate attacks (ARP, TCP, ICMP) uniformly.
+* **📊 Real-Time Dashboard:** Features a dynamic TUI (Text User Interface) that displays live interface status and target configurations at a glance.
+* **🧵 Non-Blocking Execution:** Attacks run in detached background threads (`std::thread`), allowing the user to navigate the menu, reconfigure targets, or launch concurrent vectors without interrupting active operations.
 
 ---
 
-### 🏛️ Architecture & Features
-* **Raw Socket Engineering:** All packet headers (Ethernet, ARP, IP, TCP, ICMP) are manually constructed in C++ structs, allowing for precise header manipulation.
-* **Multithreaded Core:** Attacks run in non-blocking background threads (`std::thread`), allowing the user to manage multiple simultaneous vectors via the TUI.
-* **SQLite Logging:** Integrated database automatically logs every attack session (Target IP, Source IP, Timestamp, Type) for auditing purposes.
-* **Dynamic Analysis:** Includes helper functions to parse `/proc/net/route` and query kernel interfaces (`ioctl`) for real-time network configuration.
+### ⚔️ Capabilities
+
+#### 1. ARP Cache Poisoning (Stealth Mode)
+* **Technique:** Implements a **Unicast ARP Reply** injection to bypass modern switch security (Dynamic ARP Inspection) and virtualization filters (VMware/VirtualBox).
+* **Impact:** Successfully intercepts traffic (Man-in-the-Middle) by poisoning the victim's ARP cache, mapping the Router's IP to the Attacker's MAC address.
+* **Automation:** Includes an auto-discovery engine that resolves the Target MAC and Gateway IP automatically via ARP probes.
+
+#### 2. SYN Flood (DoS)
+* **Technique:** Uses **Raw Sockets (`IP_HDRINCL`)** to manually construct TCP headers with randomized spoofed Source IPs.
+* **Impact:** Exhausts the target's TCB (Transmission Control Block) memory by flooding it with "HALF_OPEN" connections, rendering the service unreachable for legitimate users.
+
+#### 3. ICMP Ping Flood (DoS)
+* **Technique:** Generates a high-throughput stream of ICMP Echo Request (Type 8) packets with custom payloads.
+* **Impact:** Consumes target CPU and bandwidth by forcing the OS kernel to process and reply to every packet interrupt.
+
+---
+
+### 💾 Tech Stack & Features
+* **Language:** C++ (OOP, STL, Threading)
+* **Networking:** Native Linux Raw Sockets (`SOCK_RAW`, `AF_PACKET`)
+* **Database:** SQLite3 (Automatic logging of all attack sessions for auditing)
+* **System:** Dynamic parsing of `/proc/net/route` and `ioctl` for hardware detection.
 
 ---
 

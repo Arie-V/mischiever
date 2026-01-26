@@ -54,6 +54,7 @@ void Menu::run() {
         display_main_menu();
         
         std::cin >> choice;
+        // Handle invalid input
         if (std::cin.fail()) {
             choice = -1; // Invalid input
             std::cin.clear();
@@ -93,6 +94,7 @@ void Menu::print_logo() {
 }
 
 void Menu::display_main_menu_header() {
+    // Clear the screen first
     session.helper->clearScreen();
     
     // A nice wide separator
@@ -304,12 +306,14 @@ void Menu::set_target_config() {
            session.gateway_mac = temp;
         }
     }
-    std::cout << C_GREEN << "\nConfiguration updated. Returning to menu." << C_RESET << std::endl;
+    std::cout << C_GREEN << "\nConfiguration updated.\n" << C_RESET << std::endl;
     sleep(2);
 }
 
+// Dynamic attack runner that takes any AttackModule and runs it using shared Session state
 void Menu::run_selected_attack(AttackModule* attack) {
     if (!attack) return;
+    // Edge case: Ensure target IP is set
     if (session.target_ip.empty()) {
         std::cerr << C_RED << "Target IP is not set! Please configure it first." << C_RESET << std::endl;
         sleep(2);
@@ -317,10 +321,14 @@ void Menu::run_selected_attack(AttackModule* attack) {
     }
 
     // Log the attack before running
+    // Get local IP for logging by querying the interface with the helper functions we declared inside session
     std::string my_ip = session.helper->get_local_ip(session.interface.c_str());
+    // For source_log, if my_ip is empty, use "Unknown (You)" to indicate the attack is from us - otherwise use the actual IP
     std::string source_log = my_ip.empty() ? "Unknown (You)" : my_ip + " (You)";
+    // Log the attack with database service inside session, we get the info from here and the session 
     session.db->log_attack(attack->get_name(), source_log, session.target_ip);
     
+    // Use the run attack inside the module's class, passing the shared session state
     attack->run(&session);
     
     std::cout << C_YELLOW << "\nAttack is running. Press [Enter] to stop it." << C_RESET << std::endl;

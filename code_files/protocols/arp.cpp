@@ -34,13 +34,14 @@ void ARP::stop() {
 
 void ARP::run(Session* session) {
     if (session->interface.empty() || session->target_ip.empty() || session->target_mac.empty() || session->gateway_ip.empty() || session->gateway_mac.empty()) {
-        std::cerr << "ARP Spoof requires interface, target IP/MAC, and gateway IP/MAC to be set." << std::endl;
-        // You might want to use the helper functions here to resolve the MACs if they are missing
+        std::cerr << C_YELLOW << "ARP Spoof requires interface, target IP/MAC, and gateway IP/MAC to be set." << C_RESET << std::endl;
+        // TODO: Better error handling
         return;
     }
 
     stop_flag = false;
     
+    // emplace_back is used to create threads directly in the vector without copying
     // Thread 1: Poison the target (tell it we are the gateway)
     attack_threads.emplace_back(&ARP::spoof_loop, this,
         session->interface,
@@ -57,7 +58,7 @@ void ARP::run(Session* session) {
         session->gateway_mac
     );
 
-    std::cout << get_name() << " started... Poisoning target and gateway." << std::endl;
+    std::cout << C_BOLD << get_name() << " started... Poisoning target and gateway." << C_RESET << std::endl;
 }
 
 void ARP::spoof_loop(std::string iface_str, std::string target_ip_str, std::string spoof_ip_str, std::string target_mac_str) {

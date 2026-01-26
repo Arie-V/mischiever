@@ -15,14 +15,14 @@ void SYN::set_options(int port, int count) {
 // It launches the attack logic in a separate thread.
 void SYN::run(Session* session) {
     if (session->target_ip.empty()) {
-        std::cerr << "Target IP is not set. Please configure it in the main menu." << std::endl;
+        std::cerr << C_YELLOW << "Target IP is not set. Please configure it in the main menu." << C_RESET << std::endl;
         return;
     }
     stop_flag = false;
     // The syn_flood_loop is launched in a new thread
     // std::ref is used to pass the session->target_ip by reference
     attack_thread = std::thread(&SYN::syn_flood_loop, this, session->target_ip);
-    std::cout << get_name() << " started..." << std::endl;
+    std::cout << C_BOLD << get_name() << " started..." << C_RESET << std::endl;
 }
 
 // Signals the attack thread to stop and waits for it to join.
