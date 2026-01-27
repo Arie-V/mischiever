@@ -50,7 +50,7 @@ void Menu::run() {
     }
     
     int choice = -1;
-    while (choice != 5) {
+    while (choice != 4) {
         display_main_menu();
         
         std::cin >> choice;
@@ -65,8 +65,9 @@ void Menu::run() {
             case 1: show_attack_modules_menu(); break;
             case 2: show_attack_history(); break;
             case 3: set_target_config(); break;
-            case 4: session.helper->displayImage("misc/cat.jpg"); break; // Easter egg
-            case 5: break; // Exit
+            case 69: session.helper->displayImage("misc/cat.jpg"); break; // Easter egg
+            case 777: session.helper->displayImage("misc/cat2.png"); break; // Easter egg
+            case 4: break; // Exit
             default:
                 std::cout << C_RED << "Invalid choice. Please try again." << C_RESET << std::endl;
                 sleep(1);
@@ -125,8 +126,7 @@ void Menu::display_main_menu() {
     std::cout << C_GREEN << "[1]" << C_RESET << " Attack Modules" << std::endl;
     std::cout << C_GREEN << "[2]" << C_RESET << " Attack History" << std::endl;
     std::cout << C_GREEN << "[3]" << C_RESET << " Target Configuration" << std::endl;
-    std::cout << C_GREEN << "[4]" << C_RESET << " The Cat" << std::endl;
-    std::cout << C_GREEN << "[5]" << C_RESET << " Exit" << std::endl;
+    std::cout << C_GREEN << "[4]" << C_RESET << " Exit" << std::endl;
     std::cout << std::endl << C_BOLD << "mischiever > " << C_RESET;
 }
 
