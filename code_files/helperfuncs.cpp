@@ -13,7 +13,15 @@ void HelperFunctions::clearScreen(){
 }
 
 void HelperFunctions::displayImage(const char* filename) {
-    std::string command = "xdg-open " + std::string(filename);
+    std::string command;
+    // Check if running on Wayland
+    if (std::getenv("WAYLAND_DISPLAY")) {
+        // Use imv for Wayland, backgrounded so it doesn't block the menu
+        command = "imv " + std::string(filename) + " &";
+    } else {
+        // Default to xdg-open for X11 or other environments
+        command = "xdg-open " + std::string(filename);
+    }
     system(command.c_str());
 }
 
