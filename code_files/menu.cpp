@@ -197,7 +197,7 @@ void Menu::show_floods_menu() {
                 continue;
         }
         
-        // NEW CODE (Smoother)
+        // Smoother now
         if (selected_attack) {
             // Only ask for config if we genuinely don't have a target yet
             if(session.target_ip.empty()) {
@@ -253,59 +253,186 @@ void Menu::show_attack_history() {
     std::cin.get();
 }
 
-// --- Core Logic ---
-
+// Target configuration menu with input validation and auto-resolve features
 void Menu::set_target_config() {
     display_main_menu_header();
     std::cout << C_BOLD << "         TARGET CONFIGURATION           " << C_RESET << std::endl;
     std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
     std::cout << C_YELLOW << "[!] Press Enter to keep current value." << C_RESET << std::endl;
-    std::cout << C_YELLOW << "[!] Type 'resolve' in MAC fields to auto-discover." << C_RESET << std::endl;
+    std::cout << C_YELLOW << "[!] Type 'find' to scan LAN IP's or detect Gateway's IP." << C_RESET << std::endl;
+    std::cout << C_YELLOW << "[!] Type 'resolve' to auto-discover MAC addresses." << C_RESET << std::endl;
+    std::cout << C_YELLOW << "[!] Type 'q' to quit or 'd' to clear config.\n" << C_RESET << std::endl;
+    
+    // Clear buffer before starting
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
     std::string temp;
+    bool valid_input;
 
-    std::cout << C_CYAN << "Target IP [" << (session.target_ip.empty() ? "None" : session.target_ip) << "]: " << C_RESET;
-    std::getline(std::cin, temp);
-    if (!temp.empty()) session.target_ip = temp;
-
-    std::cout << C_CYAN << "Target MAC [" << (session.target_mac.empty() ? "None" : session.target_mac) << "]: " << C_RESET;
-    std::getline(std::cin, temp);
-    if (!temp.empty()) {
-        if (temp == "resolve") {
-            std::cout << C_YELLOW << "[*] Resolving Target MAC... " << C_RESET;
-            std::string mac = session.helper->get_mac_from_ip(session.target_ip);
-            if (!mac.empty()) {
-                session.target_mac = mac;
-                std::cout << C_GREEN << mac << " (Found)" << C_RESET << std::endl;
-            } else {
-                std::cout << C_RED << "Failed! Could not resolve." << C_RESET << std::endl;
-            }
-        } else {
-           session.target_mac = temp;
+    // --- HELPER LAMBDA TO HANDLE EXIT COMMANDS ---
+    auto check_exit = [&](const std::string& input) -> bool {
+        if (input == "q") {
+            std::cout << C_GREEN << "Exiting configuration..." << C_RESET << std::endl;
+            sleep(1);
+            return true; 
         }
-    }
-    
-    std::cout << C_CYAN << "Gateway IP [" << (session.gateway_ip.empty() ? "None" : session.gateway_ip) << "]: " << C_RESET;
-    std::getline(std::cin, temp);
-    if (!temp.empty()) session.gateway_ip = temp;
-
-    std::cout << C_CYAN << "Gateway MAC [" << (session.gateway_mac.empty() ? "None" : session.gateway_mac) << "]: " << C_RESET;
-    std::getline(std::cin, temp);
-     if (!temp.empty()) {
-        if (temp == "resolve") {
-            std::cout << C_YELLOW << "[*] Resolving Gateway MAC... " << C_RESET;
-            std::string mac = session.helper->get_mac_from_ip(session.gateway_ip);
-            if (!mac.empty()) {
-                session.gateway_mac = mac;
-                std::cout << C_GREEN << mac << " (Found)" << C_RESET << std::endl;
-            } else {
-                std::cout << C_RED << "Failed! Could not resolve." << C_RESET << std::endl;
-            }
-        } else {
-           session.gateway_mac = temp;
+        if (input == "d") {
+            session.target_ip.clear();
+            session.target_mac.clear();
+            session.gateway_ip.clear();
+            session.gateway_mac.clear();
+            std::cout << C_RED << "Configuration deleted." << C_RESET << std::endl;
+            sleep(1);
+            return true;
         }
-    }
+        return false;
+    };
+
+    // 1. Target IP
+    do {
+        valid_input = true;
+        std::cout << C_CYAN << "Target IP [" << (session.target_ip.empty() ? "None" : session.target_ip) << "]: " << C_RESET;
+        std::getline(std::cin, temp);
+
+        if (check_exit(temp)) return; // Check for 'q' or 'd'
+
+        // Special command to run network scan inside the configuration
+        if (temp == "find") {
+            // 1. Check if we are missing the Interface
+            if (session.interface.empty()) {
+                std::cout << C_YELLOW << "[!] Interface not set. Please enter it (e.g., eth0): " << C_RESET;
+                std::string manual_iface;
+                std::getline(std::cin, manual_iface);
+
+                if (check_exit(manual_iface)) return; // Allow them to cancel
+
+                if (!manual_iface.empty()) {
+                    session.interface = manual_iface;
+                    std::cout << C_GREEN << "Interface set to: " << session.interface << C_RESET << std::endl;
+                } else {
+                    std::cout << C_RED << "Scan aborted: No interface provided." << C_RESET << std::endl;
+                    valid_input = false; 
+                    continue;
+                }
+            }
+            
+            // 2. Run the scan
+            session.helper->scan_local_network(session.interface.c_str());
+            
+            valid_input = false; // Loop again so they can type the IP they just found
+            continue;
+        }
+
+        if (!temp.empty()) {
+            if (session.helper->is_valid_ip(temp)) {
+                session.target_ip = temp;
+            } else {
+                std::cout << C_RED << "Invalid IP format." << C_RESET << std::endl;
+                valid_input = false;
+            }
+        }
+    } while (!valid_input);
+
+    // 2. Target MAC
+    do {
+        valid_input = true;
+        std::cout << C_CYAN << "Target MAC [" << (session.target_mac.empty() ? "None" : session.target_mac) << "]: " << C_RESET;
+        std::getline(std::cin, temp);
+
+        if (check_exit(temp)) return;
+
+        if (!temp.empty()) {
+            if (temp == "resolve") {
+                if (session.target_ip.empty()) {
+                    std::cout << C_RED << "Cannot resolve MAC without Target IP!" << C_RESET << std::endl;
+                    valid_input = false; 
+                } else {
+                    std::cout << C_YELLOW << "[*] Resolving Target MAC... " << C_RESET;
+                    std::string mac = session.helper->get_mac_from_ip(session.target_ip);
+                    if (!mac.empty()) {
+                        session.target_mac = mac;
+                        std::cout << C_GREEN << mac << " (Found)" << C_RESET << std::endl;
+                    } else {
+                        std::cout << C_RED << "Failed! Enter manually." << C_RESET << std::endl;
+                        valid_input = false;
+                    }
+                }
+            } else if (session.helper->is_valid_mac(temp)) {
+                session.target_mac = temp;
+            } else {
+                std::cout << C_RED << "Invalid MAC format." << C_RESET << std::endl;
+                valid_input = false;
+            }
+        }
+    } while (!valid_input);
+
+    // 3. Gateway IP
+    do {
+        valid_input = true;
+        std::cout << C_CYAN << "Gateway IP [" << (session.gateway_ip.empty() ? "None" : session.gateway_ip) << "]: " << C_RESET;
+        std::getline(std::cin, temp);
+
+        if (check_exit(temp)) return;
+
+        // Special command to auto-detect default gateway
+        if (temp == "find") {
+            std::cout << C_YELLOW << "[*] Detecting Default Gateway... " << C_RESET;
+            std::string gw = session.helper->get_default_gateway_ip();
+            
+            if (!gw.empty()) {
+                session.gateway_ip = gw;
+                std::cout << C_GREEN << gw << " (Found & Set, Press Enter to confirm)" << C_RESET << std::endl;
+                valid_input = false; // Loop again so user sees it in the prompt brackets [10.0.0.1]
+            } else {
+                std::cout << C_RED << "Failed! Could not find a default route." << C_RESET << std::endl;
+                valid_input = false; 
+            }
+            continue;
+        }
+
+        if (!temp.empty()) {
+            if (session.helper->is_valid_ip(temp)) {
+                session.gateway_ip = temp;
+            } else {
+                std::cout << C_RED << "Invalid IP format." << C_RESET << std::endl;
+                valid_input = false;
+            }
+        }
+    } while (!valid_input);
+
+    // 4. Gateway MAC
+    do {
+        valid_input = true;
+        std::cout << C_CYAN << "Gateway MAC [" << (session.gateway_mac.empty() ? "None" : session.gateway_mac) << "]: " << C_RESET;
+        std::getline(std::cin, temp);
+
+        if (check_exit(temp)) return;
+
+        if (!temp.empty()) {
+            if (temp == "resolve") {
+                if (session.gateway_ip.empty()) {
+                    std::cout << C_RED << "Cannot resolve MAC without Gateway IP!" << C_RESET << std::endl;
+                    valid_input = false;
+                } else {
+                    std::cout << C_YELLOW << "[*] Resolving Gateway MAC... " << C_RESET;
+                    std::string mac = session.helper->get_mac_from_ip(session.gateway_ip);
+                    if (!mac.empty()) {
+                        session.gateway_mac = mac;
+                        std::cout << C_GREEN << mac << " (Found)" << C_RESET << std::endl;
+                    } else {
+                        std::cout << C_RED << "Failed! Enter manually." << C_RESET << std::endl;
+                        valid_input = false;
+                    }
+                }
+            } else if (session.helper->is_valid_mac(temp)) {
+                session.gateway_mac = temp;
+            } else {
+                std::cout << C_RED << "Invalid MAC format." << C_RESET << std::endl;
+                valid_input = false;
+            }
+        }
+    } while (!valid_input);
+
     std::cout << C_GREEN << "\nConfiguration updated.\n" << C_RESET << std::endl;
     sleep(2);
 }
