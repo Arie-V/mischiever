@@ -1,22 +1,16 @@
 #include "headers/database.h"
 #include <ctime>
+#include <iostream>
 
-// ANSI Colors
-#define C_RESET       "\033[0m"
-#define C_RED         "\033[1;31m"
-#define C_GREEN       "\033[1;32m"
-#define C_YELLOW      "\033[1;33m"
-#define C_BLUE        "\033[1;34m"
-#define C_MAGENTA     "\033[1;35m"
-#define C_CYAN        "\033[1;36m"
-#define C_BOLD        "\033[1m"
+// ANSI Colors are now included via headers that need them, e.g. menu.cpp
 
 // Callback function used by sqlite3_exec to print results
 static int callback(void* NotUsed, int argc, char** argv, char** azColName) {
     for (int i = 0; i < argc; i++) {
-        std::cout << C_CYAN << azColName[i] << ": " << C_RESET 
-                  << C_YELLOW << (argv[i] ? argv[i] : "NULL") << C_RESET;
-        if (i < argc - 1) std::cout << C_MAGENTA << " | " << C_RESET;
+        // Assuming colors are available from session.h which is included by higher-level files
+        std::cout << "\033[1;36m" << azColName[i] << ": " << "\033[0m" 
+                  << "\033[1;33m" << (argv[i] ? argv[i] : "NULL") << "\033[0m";
+        if (i < argc - 1) std::cout << "\033[1;35m" << " | " << "\033[0m";
     }
     std::cout << std::endl;
     return 0;
@@ -51,17 +45,27 @@ Database::~Database() {
     sqlite3_close(db);
 }
 
-void Database::log_attack(std::string type, std::string attacker_ip, std::string victim_ip) {
-    std::string sql = "INSERT INTO ATTACKS (TYPE, ATTACKER_IP, VICTIM_IP) " \
-                      "VALUES ('" + type + "', '" + attacker_ip + "', '" + victim_ip + "');";
+void Database::log_attack(const std::string& type, const std::string& attacker_ip, const std::string& victim_ip) {
+    const char* sql = "INSERT INTO ATTACKS (TYPE, ATTACKER_IP, VICTIM_IP) VALUES (?, ?, ?);";
+    sqlite3_stmt* stmt;
 
-    char* zErrMsg = 0;
-    int rc = sqlite3_exec(db, sql.c_str(), 0, 0, &zErrMsg);
-
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
-        std::cerr << "SQL insert error: " << zErrMsg << std::endl;
-        sqlite3_free(zErrMsg);
+        std::cerr << "SQL prepare error: " << sqlite3_errmsg(db) << std::endl;
+        return;
     }
+
+    // Bind parameters
+    sqlite3_bind_text(stmt, 1, type.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, attacker_ip.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, victim_ip.c_str(), -1, SQLITE_STATIC);
+
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        std::cerr << "SQL insert step error: " << sqlite3_errmsg(db) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
 }
 
 void Database::print_history() {
@@ -70,7 +74,7 @@ void Database::print_history() {
     int rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
     
     if (rc != SQLITE_OK) {
-        std::cerr << C_RED << "SQL error: " << zErrMsg << C_RESET << std::endl;
+        std::cerr << "\033[1;31m" << "SQL error: " << zErrMsg << "\033[0m" << std::endl;
         sqlite3_free(zErrMsg);
     }
 }

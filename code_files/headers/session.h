@@ -2,6 +2,7 @@
 #define SESSION_H
 
 #include <string>
+#include <memory>
 #include "database.h"
 #include "helperfuncs.h"
 
@@ -34,18 +35,10 @@ struct Session {
     bool arp_spoof_active = false;
 
     // Shared Services
-    Database* db;
-    HelperFunctions* helper;
+    std::unique_ptr<Database> db;
+    std::unique_ptr<HelperFunctions> helper;
 
-    Session() {
-        db = new Database();
-        helper = new HelperFunctions();
-    }
-
-    ~Session() {
-        delete db;
-        delete helper;
-    }
+    Session() : db(std::make_unique<Database>()), helper(std::make_unique<HelperFunctions>()) {}
 };
 
 #endif // SESSION_H

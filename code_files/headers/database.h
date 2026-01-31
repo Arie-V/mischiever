@@ -3,7 +3,6 @@
 
 #include <sqlite3.h>
 #include <string>
-#include <iostream>
 
 class Database {
 private:
@@ -17,7 +16,7 @@ public:
     ~Database();
 
     // Logs a new attack
-    void log_attack(std::string type, std::string attacker_ip, std::string victim_ip);
+    void log_attack(const std::string& type, const std::string& attacker_ip, const std::string& victim_ip);
 
     // Prints all history
     void print_history();
