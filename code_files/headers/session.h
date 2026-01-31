@@ -30,6 +30,9 @@ struct Session {
     std::string dhcp_server_ip; // Defaults to gateway_ip
     std::string dns_server_ip;  // Defaults to gateway_ip
 
+    // Attack-specific states
+    bool arp_spoof_active = false;
+
     // Shared Services
     Database* db;
     HelperFunctions* helper;

@@ -217,7 +217,10 @@ void Menu::show_spoofings_menu() {
         display_main_menu_header();
         std::cout << C_BOLD << "           SPOOFING ATTACKS             " << C_RESET << std::endl;
         std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
-        std::cout << C_GREEN << "[1]" << C_RESET << " ARP Spoof" << std::endl;
+        std::cout << C_YELLOW << "[!] Some attacks can be toggled ON/OFF to run in the background." << C_RESET << std::endl;
+        std::cout << C_GREEN << "[1]" << C_RESET << " ARP Spoof "
+                  << (session.arp_spoof_active ? C_GREEN "[ON]" C_RESET : C_RED "[OFF]" C_RESET)
+                  << std::endl;
         std::cout << C_GREEN << "[2]" << C_RESET << " Back" << std::endl;
         std::cout << std::endl << C_BOLD << "mischiever/modules/spoofings > " << C_RESET;
 
@@ -231,11 +234,43 @@ void Menu::show_spoofings_menu() {
         if (choice == 1) {
             AttackModule* arp_attack = nullptr;
             for (const auto& mod : attack_modules) {
-                if (mod->get_name() == "ARP Spoof") arp_attack = mod.get();
+                if (mod->get_name() == "ARP Spoof") {
+                    arp_attack = mod.get();
+                    break;
+                }
             }
+
             if (arp_attack) {
-                set_target_config();
-                run_selected_attack(arp_attack);
+                if (session.arp_spoof_active) {
+                    // If it's on, turn it off
+                    arp_attack->stop();
+                    session.arp_spoof_active = false;
+                    std::cout << C_GREEN << "ARP Spoof attack stopped." << C_RESET << std::endl;
+                    sleep(1);
+                } else {
+                    // If it's off, turn it on
+                    if (session.target_ip.empty() || session.gateway_ip.empty()) {
+                         std::cout << C_YELLOW << "[!] Target and Gateway IPs must be set for this attack." << C_RESET << std::endl;
+                         sleep(1);
+                         set_target_config();
+                    }
+                    
+                    // Re-check after config
+                    if (!session.target_ip.empty() && !session.gateway_ip.empty()) {
+                        // Log before running
+                        std::string my_ip = session.helper->get_local_ip(session.interface.c_str());
+                        std::string source_log = my_ip.empty() ? "Unknown (You)" : my_ip + " (You)";
+                        session.db->log_attack(arp_attack->get_name(), source_log, session.target_ip);
+                        
+                        arp_attack->run(&session); // This runs in the background
+                        session.arp_spoof_active = true;
+                        std::cout << C_GREEN << "ARP Spoof attack started in the background." << C_RESET << std::endl;
+                        sleep(2);
+                    } else {
+                        std::cout << C_RED << "Configuration incomplete. Attack not started." << C_RESET << std::endl;
+                        sleep(1);
+                    }
+                }
             }
         } else if (choice != 2) {
              std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
@@ -301,7 +336,7 @@ void Menu::show_attack_history() {
     std::cin.get();
 }
 
-// --- Target Configuration Sub-Menu ---
+// Target Configuration Sub-Menu
 void Menu::show_target_config_menu() {
     int choice = -1;
     while (choice != 4) {
@@ -309,7 +344,7 @@ void Menu::show_target_config_menu() {
         std::cout << C_BOLD << "         TARGET CONFIGURATION           " << C_RESET << std::endl;
         std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
         std::cout << C_GREEN << "[1]" << C_RESET << " View current configuration" << std::endl;
-        std::cout << C_GREEN << "[2]" << C_RESET << " Set new target configuration" << std::endl;
+        std::cout << C_GREEN << "[2]" << C_RESET << " Set target configuration" << std::endl;
         std::cout << C_GREEN << "[3]" << C_RESET << " Delete target configuration" << std::endl;
         std::cout << C_GREEN << "[4]" << C_RESET << " Back" << std::endl;
         std::cout << std::endl << C_BOLD << "mischiever/config > " << C_RESET;

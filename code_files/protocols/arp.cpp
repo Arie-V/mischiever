@@ -58,7 +58,7 @@ void ARP::run(Session* session) {
         session->gateway_mac
     );
 
-    std::cout << C_BOLD << get_name() << " started... Poisoning target and gateway." << C_RESET << std::endl;
+    //std::cout << C_BOLD << get_name() << " started... Poisoning target and gateway." << C_RESET << std::endl;
 }
 
 void ARP::spoof_loop(std::string iface_str, std::string target_ip_str, std::string spoof_ip_str, std::string target_mac_str) {
