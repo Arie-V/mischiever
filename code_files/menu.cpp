@@ -64,7 +64,7 @@ void Menu::run() {
         switch (choice) {
             case 1: show_attack_modules_menu(); break;
             case 2: show_attack_history(); break;
-            case 3: set_target_config(); break;
+            case 3: show_target_config_menu(); break;
             case 69: session.helper->displayImage("misc/cat.jpg"); break; // Easter egg
             case 777: session.helper->displayImage("misc/cat2.png"); break; // Easter egg
             case 4: break; // Exit
@@ -138,7 +138,8 @@ void Menu::show_attack_modules_menu() {
         std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
         std::cout << C_GREEN << "[1]" << C_RESET << " Floods" << std::endl;
         std::cout << C_GREEN << "[2]" << C_RESET << " Spoofings" << std::endl;
-        std::cout << C_GREEN << "[3]" << C_RESET << " Back" << std::endl;
+        std::cout << C_GREEN << "[3]" << C_RESET << " Denial of Service" << std::endl;
+        std::cout << C_GREEN << "[4]" << C_RESET << " Back" << std::endl;
         std::cout << std::endl << C_BOLD << "mischiever/modules > " << C_RESET;
 
         std::cin >> choice;
@@ -151,7 +152,8 @@ void Menu::show_attack_modules_menu() {
         switch (choice) {
             case 1: show_floods_menu(); break;
             case 2: show_spoofings_menu(); break;
-            case 3: break;
+            case 3: show_dos_menu(); break;
+            case 4: return;
             default:
                 std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
                 sleep(1);
@@ -242,12 +244,123 @@ void Menu::show_spoofings_menu() {
     }
 }
 
+void Menu::show_dos_menu() {
+    int choice = -1;
+    while (choice != 2) {
+        display_main_menu_header();
+        std::cout << C_BOLD << "           DoS ATTACKS                  " << C_RESET << std::endl;
+        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+        std::cout << C_GREEN << "[1]" << C_RESET << " DHCP Lease Breaker" << std::endl;
+        std::cout << C_GREEN << "[2]" << C_RESET << " Back" << std::endl;
+        std::cout << std::endl << C_BOLD << "mischiever/modules/dos > " << C_RESET;
+
+        std::cin >> choice;
+        // Input validation to prevent infinite loops on bad input
+        if (std::cin.fail()) {
+            choice = -1;
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
+
+        if (choice == 1) {
+            AttackModule* selected_attack = nullptr;
+            
+            // Try to find the module (Future-proofing for when we add it)
+            for (const auto& mod : attack_modules) {
+                if (mod->get_name() == "DHCP Release") selected_attack = mod.get();
+            }
+
+            if (selected_attack) {
+                // If found, ensure target is set and run it
+                if(session.target_ip.empty()) {
+                    std::cout << C_YELLOW << "[!] Target not set. Redirecting to configuration..." << C_RESET << std::endl;
+                    set_target_config();
+                }
+                run_selected_attack(selected_attack);
+            } else {
+                // Placeholder behavior until we code the class
+                std::cout << C_YELLOW << "\n[!] Module 'DHCP Release' is not yet loaded/implemented." << C_RESET << std::endl;
+                std::cout << C_YELLOW << "    (This feature is coming in the next update)" << C_RESET << std::endl;
+                sleep(2);
+            }
+        } else if (choice != 2) {
+             std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
+             sleep(1);
+        }
+    }
+}
+    
 void Menu::show_attack_history() {
     display_main_menu_header();
     std::cout << C_BOLD << "                            ATTACK HISTORY               " << C_RESET << std::endl;
     std::cout << C_BLUE << "================================================================================================================================" << C_RESET << std::endl;
     session.db->print_history();
     std::cout << C_BLUE << "================================================================================================================================" << C_RESET << std::endl;
+    std::cout << "\nPress Enter to return..." << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cin.get();
+}
+
+// --- Target Configuration Sub-Menu ---
+void Menu::show_target_config_menu() {
+    int choice = -1;
+    while (choice != 4) {
+        display_main_menu_header();
+        std::cout << C_BOLD << "         TARGET CONFIGURATION           " << C_RESET << std::endl;
+        std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+        std::cout << C_GREEN << "[1]" << C_RESET << " View current configuration" << std::endl;
+        std::cout << C_GREEN << "[2]" << C_RESET << " Set new target configuration" << std::endl;
+        std::cout << C_GREEN << "[3]" << C_RESET << " Delete target configuration" << std::endl;
+        std::cout << C_GREEN << "[4]" << C_RESET << " Back" << std::endl;
+        std::cout << std::endl << C_BOLD << "mischiever/config > " << C_RESET;
+
+        std::cin >> choice;
+        if (std::cin.fail()) {
+            choice = -1;
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
+
+        switch (choice) {
+            case 1: 
+                view_target_config(); 
+                break;
+            case 2: 
+                // This calls the "Wizard" function
+                set_target_config(); 
+                break;
+            case 3: 
+                delete_target_config(); 
+                break;
+            case 4: 
+                return; // Go back to Main Menu
+            default:
+                std::cout << C_RED << "Invalid choice." << C_RESET << std::endl;
+                sleep(1);
+                break;
+        }
+    }
+}
+
+void Menu::view_target_config() {
+    display_main_menu_header();
+    std::cout << C_BOLD << "        CURRENT CONFIGURATION           " << C_RESET << std::endl;
+    std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
+    
+    // Helper lambda for consistent spacing
+    auto print_param = [](std::string label, std::string value) {
+        std::cout << std::left << std::setw(15) << label << ": ";
+        if (value.empty()) std::cout << C_YELLOW << "Not Set" << C_RESET << std::endl;
+        else std::cout << C_GREEN << value << C_RESET << std::endl;
+    };
+
+    print_param("Interface", session.interface);
+    print_param("Target IP", session.target_ip);
+    print_param("Target MAC", session.target_mac);
+    print_param("Gateway IP", session.gateway_ip);
+    print_param("Gateway MAC", session.gateway_mac);
+    
+    std::cout << C_BLUE << "========================================" << C_RESET << std::endl;
     std::cout << "\nPress Enter to return..." << std::endl;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     std::cin.get();
@@ -261,7 +374,7 @@ void Menu::set_target_config() {
     std::cout << C_YELLOW << "[!] Press Enter to keep current value." << C_RESET << std::endl;
     std::cout << C_YELLOW << "[!] Type 'find' to scan LAN IP's or detect Gateway's IP." << C_RESET << std::endl;
     std::cout << C_YELLOW << "[!] Type 'resolve' to auto-discover MAC addresses." << C_RESET << std::endl;
-    std::cout << C_YELLOW << "[!] Type 'q' to quit or 'd' to clear config.\n" << C_RESET << std::endl;
+    std::cout << C_YELLOW << "[!] Type 'q' to quit.\n" << C_RESET << std::endl;
     
     // Clear buffer before starting
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -276,15 +389,6 @@ void Menu::set_target_config() {
             sleep(1);
             return true; 
         }
-        if (input == "d") {
-            session.target_ip.clear();
-            session.target_mac.clear();
-            session.gateway_ip.clear();
-            session.gateway_mac.clear();
-            std::cout << C_RED << "Configuration deleted." << C_RESET << std::endl;
-            sleep(1);
-            return true;
-        }
         return false;
     };
 
@@ -294,7 +398,7 @@ void Menu::set_target_config() {
         std::cout << C_CYAN << "Target IP [" << (session.target_ip.empty() ? "None" : session.target_ip) << "]: " << C_RESET;
         std::getline(std::cin, temp);
 
-        if (check_exit(temp)) return; // Check for 'q' or 'd'
+        if (check_exit(temp)) return; // Check for 'q'
 
         // Special command to run network scan inside the configuration
         if (temp == "find") {
@@ -435,6 +539,25 @@ void Menu::set_target_config() {
 
     std::cout << C_GREEN << "\nConfiguration updated.\n" << C_RESET << std::endl;
     sleep(2);
+}
+
+void Menu::delete_target_config() {
+    char confirm;
+    std::cout << C_YELLOW << "\n[!] Are you sure you want to delete all configuration? (y/n): " << C_RESET;
+    std::cin >> confirm;
+
+    if (confirm == 'y' || confirm == 'Y') {
+        // Clear all session variables except Interface (we prefer to keep that)
+        session.target_ip.clear();
+        session.target_mac.clear();
+        session.gateway_ip.clear();
+        session.gateway_mac.clear();
+        
+        std::cout << C_RED << "Configuration wiped." << C_RESET << std::endl;
+    } else {
+        std::cout << C_GREEN << "Operation cancelled." << C_RESET << std::endl;
+    }
+    sleep(1);
 }
 
 // Dynamic attack runner that takes any AttackModule and runs it using shared Session state

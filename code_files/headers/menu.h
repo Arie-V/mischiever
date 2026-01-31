@@ -33,9 +33,13 @@ private:
     void show_floods_menu();
     void show_spoofings_menu();
     void show_attack_history();
+    void show_dos_menu();
 
     // Core logic
-    void set_target_config();
+    void show_target_config_menu();  // Target configuration menu
+    void view_target_config();       // Option 1
+    void set_target_config();      // Option 2
+    void delete_target_config();     // Option 3
     void run_selected_attack(AttackModule* attack);
 };
 

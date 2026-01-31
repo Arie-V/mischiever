@@ -26,6 +26,10 @@ struct Session {
     std::string gateway_ip;
     std::string gateway_mac;
 
+    // Advanced Configurations
+    std::string dhcp_server_ip; // Defaults to gateway_ip
+    std::string dns_server_ip;  // Defaults to gateway_ip
+
     // Shared Services
     Database* db;
     HelperFunctions* helper;
